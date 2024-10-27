@@ -2,9 +2,7 @@
 #define UI_HPP
 
 #include <functional>
-#include "../draw_info/draw_info.hpp"
-#include "../vertex_geometry/vertex_geometry.hpp"
-#include "../font_atlas/font_atlas.hpp"
+#include "sbpt_generated_includes.hpp"
 
 struct UIRect {
     IVPSolidColor ivpsc;
