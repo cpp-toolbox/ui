@@ -156,9 +156,9 @@ void UI::add_textbox(const std::string &text, float x_pos_ndc, float y_pos_ndc, 
     text_boxes.emplace_back(ivpsc, ivpt, false);
 };
 
-void UI::add_clickable_textbox(std::function<void()> on_click, const std::string &text, float x_pos_ndc,
-                               float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
-                               const glm::vec3 &hover_color) {
+void UI::add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover,
+                               const std::string &text, float x_pos_ndc, float y_pos_ndc, float width, float height,
+                               const glm::vec3 &regular_color, const glm::vec3 &hover_color) {
     auto is = generate_rectangle_indices();
     auto vs = generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
@@ -169,10 +169,10 @@ void UI::add_clickable_textbox(std::function<void()> on_click, const std::string
     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text, x_pos_ndc, y_pos_ndc, width, height);
     IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
 
-    clickable_text_boxes.emplace_back(on_click, ivpsc, ivpt, regular_color, hover_color, rect, false);
+    clickable_text_boxes.emplace_back(on_click, on_hover, ivpsc, ivpt, regular_color, hover_color, rect, false);
 };
 
-void UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
+void UI::add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
                        float x_pos_ndc, float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color) {
     auto is = generate_rectangle_indices();

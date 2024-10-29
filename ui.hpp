@@ -17,6 +17,7 @@ struct UITextBox {
 
 struct UIClickableTextBox {
     std::function<void()> on_click;
+    std::function<void()> on_hover;
     IVPSolidColor ivpsc;
     IVPTextured text_drawing_data;
     glm::vec3 regular_color;
@@ -61,11 +62,21 @@ class UI {
     void add_textbox(const std::string &text, float x_pos_ndc, float y_pos_ndc, float width, float height,
                      const glm::vec3 &normalized_rgb);
 
-    void add_clickable_textbox(std::function<void()> on_click, const std::string &text, float x_pos_ndc,
-                               float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
-                               const glm::vec3 &hover_color);
+    /* why we pass our fucntions by reference:
+     * Capturing State in Lambdas:
+     * If the on_click function uses any external state or variables (like curr_state or other context-dependent
+     * variables),  ensure that you capture them correctly. In the provided code, on_click is passed by value,
+     * which means it will capture the current values of any external variables when the function is defined.
+     * If those variables change later, the on_click function will still hold the old values unless you capture by
+     reference
+     * (e.g., by using [&] in a lambda). This is particularly relevant if curr_state needs to be updated when a text box
+     is clicked.
+     */
+    void add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover,
+                               const std::string &text, float x_pos_ndc, float y_pos_ndc, float width, float height,
+                               const glm::vec3 &regular_color, const glm::vec3 &hover_color);
 
-    void add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
+    void add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
                        float x_pos_ndc, float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color);
 
