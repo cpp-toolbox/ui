@@ -5,6 +5,31 @@
 #include <optional>
 #include "sbpt_generated_includes.hpp"
 
+struct FileBrowser {
+    float fsb_width;
+    float fsb_height;
+    float fsb_to_top_edge_dist;
+
+    Rectangle background_rect;
+    Rectangle current_directory_rect;
+    Rectangle main_file_view_rect;
+    Rectangle file_selection_bar;
+    Rectangle open_button;
+    Rectangle close_button;
+    Rectangle up_a_dir_button;
+
+    // Constructor to initialize the struct with the necessary parameters
+    FileBrowser(float width, float height)
+        : fsb_width(width), fsb_height(height), fsb_to_top_edge_dist(height / 2.0),
+          background_rect(create_rectangle(0, 0, width, height)),
+          current_directory_rect(create_rectangle(0, 0.8 * fsb_to_top_edge_dist, 0.8 * width, 0.1 * height)),
+          main_file_view_rect(create_rectangle(0, 0 * height, 0.7 * width, 0.7 * height)),
+          file_selection_bar(create_rectangle(0, -0.4 * height, 0.8 * width, 0.1 * height)),
+          open_button(create_rectangle(0.4 * width, -0.4 * height, 0.1 * width, 0.1 * height)),
+          close_button(create_rectangle(0.4 * width, 0.4 * height, 0.05 * width, 0.05 * height)),
+          up_a_dir_button(create_rectangle(-0.4 * width, 0.4 * height, 0.05 * width, 0.05 * height)) {}
+};
+
 struct UIRect {
     int id = UniqueIDGenerator::generate();
     IVPSolidColor ivpsc;
