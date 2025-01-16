@@ -229,6 +229,17 @@ bool UI::remove_clickable_textbox(int do_id) {
     return false; // Object not found
 }
 
+bool UI::remove_textbox(int do_id) {
+    auto it =
+        std::find_if(text_boxes.begin(), text_boxes.end(), [do_id](const UITextBox &obj) { return obj.id == do_id; });
+
+    if (it != text_boxes.end()) {
+        text_boxes.erase(it);
+        return true; // Object was found and removed
+    }
+    return false; // Object not found
+}
+
 int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
                               float x_pos_ndc, float y_pos_ndc, float width, float height,
                               const glm::vec3 &regular_color, const glm::vec3 &hover_color) {

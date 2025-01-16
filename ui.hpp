@@ -136,7 +136,7 @@ class UI {
                               Rectangle &rect, const glm::vec3 &regular_color, const glm::vec3 &hover_color);
 
     bool remove_clickable_textbox(int do_id);
-
+    bool remove_textbox(int do_id);
     UIClickableTextBox *get_clickable_textbox(int do_id);
 
     // same version without function references, so we can create generic throwaway functions if we need to
