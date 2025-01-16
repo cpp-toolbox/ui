@@ -33,4 +33,10 @@ for (auto &tb : filesystem_browser.get_clickable_text_boxes()) {
         tb.id, tb.text_drawing_data.indices, tb.text_drawing_data.xyz_positions,
         tb.text_drawing_data.texture_coordinates);
 }
+
+glDisable(GL_DEPTH_TEST);
+batcher.absolute_position_with_colored_vertex_shader_batcher.draw_everything();
+batcher.transform_v_with_signed_distance_field_text_shader_batcher.draw_everything();
+glEnable(GL_DEPTH_TEST);
+
 ```
