@@ -34,6 +34,7 @@ struct UIRect {
     int id = UniqueIDGenerator::generate();
     IVPSolidColor ivpsc;
     bool mouse_above = false;
+    TemporalBinarySignal modified_signal;
     UIRect(IVPSolidColor ivpsc) : ivpsc(ivpsc) {};
 };
 
@@ -67,6 +68,52 @@ struct UIClickableTextBox {
           regular_color(regular_color), hover_color(hover_color), rect(rect) {}
 };
 
+struct UIDropdown {
+    int id = UniqueIDGenerator::generate();
+
+    std::string active_selection;
+
+    glm::vec3 regular_color;
+    glm::vec3 hover_color;
+
+    std::function<void()> on_click;
+    std::function<void()> on_hover;
+    IVPSolidColor dropdown_background;
+    IVPTextured dropdown_text_data;
+    Rectangle dropdown_rect;
+
+    // a vector because we have one for each dropdown elt
+    std::vector<std::function<void()>> dropdown_option_on_clicks;
+    std::vector<std::function<void()>> dropdown_option_on_hovers;
+    std::vector<Rectangle> dropdown_option_rects;
+    std::vector<IVPSolidColor> dropdown_option_backgrounds;
+    std::vector<IVPTextured> dropdown_option_text_data;
+    std::vector<std::string> dropdown_options;
+    std::vector<unsigned int> dropdown_doids;
+
+    bool mouse_inside = false;
+    bool dropdown_open = false;
+    TemporalBinarySignal modified_signal;
+
+    UIDropdown(std::function<void()> on_click, std::function<void()> on_hover, IVPSolidColor dropdown_background,
+               IVPTextured dropdown_text_data, glm::vec3 regular_color, glm::vec3 hover_color, Rectangle dropdown_rect,
+               std::vector<std::string> dropdown_options, std::vector<std::function<void()>> dropdown_option_on_clicks,
+               std::vector<IVPSolidColor> dropdown_option_backgrounds,
+               std::vector<IVPTextured> dropdown_option_text_data, std::vector<Rectangle> dropdown_option_rects)
+        : on_click(on_click), on_hover(on_hover), dropdown_background(dropdown_background),
+          dropdown_text_data(dropdown_text_data), regular_color(regular_color), hover_color(hover_color),
+          dropdown_rect(dropdown_rect), dropdown_options(dropdown_options),
+          dropdown_option_on_clicks(dropdown_option_on_clicks),
+          dropdown_option_backgrounds(dropdown_option_backgrounds),
+          dropdown_option_text_data(dropdown_option_text_data), dropdown_option_rects(dropdown_option_rects) {
+        // TODO we're running under the assumption that every dropdown will have at least one option
+        active_selection = dropdown_options.at(0);
+        for (int i = 0; i < dropdown_options.size(); i++) {
+            dropdown_doids.push_back(UniqueIDGenerator::generate());
+        }
+    }
+};
+
 struct UIInputBox {
     int id = UniqueIDGenerator::generate();
     std::function<void(std::string)> on_confirm;
@@ -78,6 +125,7 @@ struct UIInputBox {
     glm::vec3 focused_color;
     Rectangle rect;
     bool focused = false;
+    TemporalBinarySignal modified_signal;
 
     UIInputBox(std::function<void(std::string)> on_confirm, IVPSolidColor background_ivpsc,
                IVPTextured text_drawing_data, std::string placeholder_text, std::string contents,
@@ -99,7 +147,6 @@ class UI {
     void process_delete_action();
 
     void add_colored_rectangle(Rectangle ndc_rectangle, const glm::vec3 &normalized_rgb);
-
     void add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, float height,
                                const glm::vec3 &normalized_rgb);
 
@@ -109,7 +156,6 @@ class UI {
      * &hover_color);*/
 
     int add_textbox(const std::string &text, Rectangle ndc_text_rectangle, const glm::vec3 &normalized_rgb);
-
     int add_textbox(const std::string &text, float center_x_pos_ndc, float center_y_pos_ndc, float width, float height,
                     const glm::vec3 &normalized_rgb);
 
@@ -135,6 +181,10 @@ class UI {
     int add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
                               Rectangle &rect, const glm::vec3 &regular_color, const glm::vec3 &hover_color);
 
+    int add_dropdown(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
+                     const Rectangle &rect, const glm::vec3 &regular_color, const glm::vec3 &hover_color,
+                     const std::vector<std::string> &options, std::vector<std::function<void()>> option_on_clicks);
+
     bool remove_clickable_textbox(int do_id);
     bool remove_textbox(int do_id);
     UIClickableTextBox *get_clickable_textbox(int do_id);
@@ -149,6 +199,9 @@ class UI {
                                         float height, const glm::vec3 &regular_color, const glm::vec3 &hover_color);
 
     void add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
+                       const Rectangle &ndc_rect, const glm::vec3 &regular_color, const glm::vec3 &focused_color);
+
+    void add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
                        float x_pos_ndc, float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color);
 
@@ -157,6 +210,7 @@ class UI {
     /*const std::vector<IVPTextured> &get_text_boxes() const;*/
 
     const std::vector<UIClickableTextBox> &get_clickable_text_boxes() const;
+    const std::vector<UIDropdown> &get_dropdowns() const;
     const std::vector<UIInputBox> &get_input_boxes() const;
     const std::vector<UITextBox> &get_text_boxes() const;
     const std::vector<UIRect> &get_colored_boxes() const;
@@ -169,6 +223,7 @@ class UI {
 
     std::vector<UIRect> rectangles;
 
+    std::vector<UIDropdown> dropdowns;
     std::vector<UIClickableTextBox> clickable_text_boxes;
     std::vector<UITextBox> text_boxes;
     std::vector<UIInputBox> input_boxes;
