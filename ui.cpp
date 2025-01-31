@@ -54,14 +54,17 @@ void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
 }
 
 void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
+
+    bool already_clicked_a_text_box = false;
     for (auto &cr : clickable_text_boxes) {
-        if (is_point_in_rectangle(cr.rect, mouse_pos_ndc)) {
+        if (not already_clicked_a_text_box and is_point_in_rectangle(cr.rect, mouse_pos_ndc)) {
             cr.on_click();
+            // we don't want to propagate clicks through to multiple.
+            already_clicked_a_text_box = true;
         }
     }
 
     bool already_focused_something = false;
-
     for (auto &ib : input_boxes) {
         bool click_inside_box = is_point_in_rectangle(ib.rect, mouse_pos_ndc);
         if (not ib.focused) {
@@ -150,12 +153,14 @@ void UI::process_confirm_action() {
     for (auto &input_box : input_boxes) {
         if (input_box.focused) {
             input_box.on_confirm(input_box.contents);
-            TextMesh tm = font_atlas.generate_text_mesh_size_constraints(
-                input_box.placeholder_text, input_box.rect.center.x, input_box.rect.center.y, input_box.rect.width,
-                input_box.rect.height);
-            IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
-            input_box.text_drawing_data = ivpt;
-            /*input_box.modified_signal.toggle_state();*/
+
+            // after hitting enter go back to regular non focused mode.
+            input_box.focused = false;
+            std::vector<glm::vec3> cs(input_box.background_ivpsc.xyz_positions.size(), input_box.regular_color);
+            IVPSolidColor ivpsc(input_box.background_ivpsc.indices, input_box.background_ivpsc.xyz_positions, cs);
+            input_box.background_ivpsc = ivpsc;
+            input_box.modified_signal.toggle_state();
+
             break;
         }
     }
