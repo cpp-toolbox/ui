@@ -75,7 +75,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 // blank out the text box on click
                 TextMesh tm = font_atlas.generate_text_mesh_size_constraints(
                     ib.contents, ib.rect.center.x, ib.rect.center.y, ib.rect.width, ib.rect.height);
-                IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+                draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
                 ib.text_drawing_data = ivpt;
                 ib.focused = true;
                 ib.modified_signal.toggle_state();
@@ -89,7 +89,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 if (ib.contents.size() == 0) { // put back placeholder
                     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(
                         ib.placeholder_text, ib.rect.center.x, ib.rect.center.y, ib.rect.width, ib.rect.height);
-                    IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+                    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
                     ib.text_drawing_data = ivpt;
                 }
                 ib.modified_signal.toggle_state();
@@ -108,7 +108,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 dd.dropdown_background.rgb_colors = cs;
                 // blank out the text box on click
                 TextMesh tm = font_atlas.generate_text_mesh_size_constraints(dd.active_selection, dd.dropdown_rect);
-                IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+                draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
                 dd.dropdown_text_data = ivpt;
                 dd.dropdown_open = true;
                 dd.modified_signal.toggle_state();
@@ -141,7 +141,7 @@ void UI::process_key_press(const std::string &character_pressed) {
             TextMesh tm = font_atlas.generate_text_mesh_size_constraints(input_box.contents, input_box.rect.center.x,
                                                                          input_box.rect.center.y, input_box.rect.width,
                                                                          input_box.rect.height);
-            IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+            draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
             input_box.text_drawing_data = ivpt;
             input_box.modified_signal.toggle_state();
             break; // only one thing ever focused.
@@ -157,7 +157,8 @@ void UI::process_confirm_action() {
             // after hitting enter go back to regular non focused mode.
             input_box.focused = false;
             std::vector<glm::vec3> cs(input_box.background_ivpsc.xyz_positions.size(), input_box.regular_color);
-            IVPSolidColor ivpsc(input_box.background_ivpsc.indices, input_box.background_ivpsc.xyz_positions, cs);
+            draw_info::IVPSolidColor ivpsc(input_box.background_ivpsc.indices, input_box.background_ivpsc.xyz_positions,
+                                           cs);
             input_box.background_ivpsc = ivpsc;
             input_box.modified_signal.toggle_state();
 
@@ -179,7 +180,7 @@ void UI::process_delete_action() {
             TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text_to_use, input_box.rect.center.x,
                                                                          input_box.rect.center.y, input_box.rect.width,
                                                                          input_box.rect.height);
-            IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+            draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
             input_box.text_drawing_data = ivpt;
             input_box.modified_signal.toggle_state();
             break; // only one thing ever focused.
@@ -197,7 +198,7 @@ void UI::add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, fl
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
-    IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs);
     rectangles.emplace_back(ivpsc);
 }
 /*void UI::add_clickable_colored_rectangle(std::function<void()> on_click, float x_pos_ndc, float y_pos_ndc, float
@@ -215,7 +216,8 @@ void UI::add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, fl
 /*    clickable_text_boxes.emplace_back(on_click, ivpsc, regular_color, hover_color, rect, false);*/
 /*};*/
 
-int UI::add_textbox(const std::string &text, vertex_geometry::Rectangle ndc_text_rectangle, const glm::vec3 &normalized_rgb) {
+int UI::add_textbox(const std::string &text, vertex_geometry::Rectangle ndc_text_rectangle,
+                    const glm::vec3 &normalized_rgb) {
     return this->add_textbox(text, ndc_text_rectangle.center.x, ndc_text_rectangle.center.y, ndc_text_rectangle.width,
                              ndc_text_rectangle.height, normalized_rgb);
 }
@@ -227,7 +229,7 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     auto vs = vertex_geometry::generate_rectangle_vertices(center_x_pos_ndc, center_y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
 
-    IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs);
 
     // adding rectangles so taht we can check for intersection easier.
     glm::vec3 center(center_x_pos_ndc, center_y_pos_ndc, 0);
@@ -235,7 +237,7 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     rectangles.emplace_back(ivpsc);
     TextMesh tm =
         font_atlas.generate_text_mesh_size_constraints(text, center_x_pos_ndc, center_y_pos_ndc, width, height);
-    IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
     UITextBox tb(ivpsc, ivpt, bounding_rect);
     text_boxes.emplace_back(tb);
     return tb.id;
@@ -251,7 +253,7 @@ void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
             new_text, textbox->bounding_rect.center.x, textbox->bounding_rect.center.y, textbox->bounding_rect.width,
             textbox->bounding_rect.height);
 
-        textbox->text_drawing_data = IVPTextured(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+        textbox->text_drawing_data = draw_info::IVPTextured(tm.indices, tm.vertex_positions, tm.texture_coordinates);
         textbox->modified_signal.toggle_state();
     }
 }
@@ -267,22 +269,23 @@ UITextBox *UI::get_textbox(int doid) {
 }
 
 int UI::add_dropdown(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
-                     const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color, const glm::vec3 &hover_color,
-                     const std::vector<std::string> &options, std::vector<std::function<void()>> option_on_clicks) {
+                     const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
+                     const glm::vec3 &hover_color, const std::vector<std::string> &options,
+                     std::vector<std::function<void()>> option_on_clicks) {
 
     // main dropdown button
     auto ivs = rect.get_ivs();
     auto is = ivs.indices;
     auto vs = ivs.vertices;
     std::vector<glm::vec3> cs(vs.size(), regular_color);
-    IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs);
     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text, rect);
-    IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
     // main dropdown button
 
     // now the dropdown buttons themselves
-    std::vector<IVPTextured> option_text_data;
-    std::vector<IVPSolidColor> option_background_rect_data;
+    std::vector<draw_info::IVPTextured> option_text_data;
+    std::vector<draw_info::IVPSolidColor> option_background_rect_data;
     std::vector<vertex_geometry::Rectangle> dropdown_option_rects;
     int i = 1;
     for (const auto &option : options) {
@@ -294,11 +297,11 @@ int UI::add_dropdown(std::function<void()> &on_click, std::function<void()> &on_
         auto vs = ivs.vertices;
 
         std::vector<glm::vec3> cs(vs.size(), regular_color);
-        IVPSolidColor ivpsc(is, vs, cs);
+        draw_info::IVPSolidColor ivpsc(is, vs, cs);
         option_background_rect_data.push_back(ivpsc);
 
         TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text, option_rect);
-        IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+        draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
         option_text_data.push_back(ivpt);
 
         i += 1;
@@ -312,7 +315,8 @@ int UI::add_dropdown(std::function<void()> &on_click, std::function<void()> &on_
 // todo we don't need to take in a reference ot a rect to make our lives easier.
 // in the future makt it take a const reference for the future.
 int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
-                              vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color, const glm::vec3 &hover_color) {
+                              vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
+                              const glm::vec3 &hover_color) {
     return this->add_clickable_textbox(on_click, on_hover, text, rect.center.x, rect.center.y, rect.width, rect.height,
                                        regular_color, hover_color);
 }
@@ -356,11 +360,11 @@ int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<voi
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
 
-    IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs);
     vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, 0), width, height);
 
     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text, x_pos_ndc, y_pos_ndc, width, height);
-    IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
 
     UIClickableTextBox clickable_text_box(on_click, on_hover, ivpsc, ivpt, regular_color, hover_color, rect);
     clickable_text_boxes.emplace_back(clickable_text_box);
@@ -368,8 +372,8 @@ int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<voi
 };
 
 void UI::add_clickable_textbox_copy_fun(std::function<void()> on_click, std::function<void()> on_hover,
-                                        const std::string &text, vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
-                                        const glm::vec3 &hover_color) {
+                                        const std::string &text, vertex_geometry::Rectangle &rect,
+                                        const glm::vec3 &regular_color, const glm::vec3 &hover_color) {
     this->add_clickable_textbox_copy_fun(on_click, on_hover, text, rect.center.x, rect.center.y, rect.width,
                                          rect.height, regular_color, hover_color);
 }
@@ -381,17 +385,18 @@ void UI::add_clickable_textbox_copy_fun(std::function<void()> on_click, std::fun
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
 
-    IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs);
     vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, 0), width, height);
 
     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text, x_pos_ndc, y_pos_ndc, width, height);
-    IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
 
     clickable_text_boxes.emplace_back(on_click, on_hover, ivpsc, ivpt, regular_color, hover_color, rect);
 };
 
 void UI::add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
-                       const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color, const glm::vec3 &focused_color) {
+                       const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
+                       const glm::vec3 &focused_color) {
     return this->add_input_box(on_confirm, placeholder_text, ndc_rect.center.x, ndc_rect.center.y, ndc_rect.width,
                                ndc_rect.height, regular_color, focused_color);
 }
@@ -403,11 +408,11 @@ void UI::add_input_box(std::function<void(std::string)> &on_confirm, const std::
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
 
-    IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs);
     vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, 0), width, height);
 
     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(placeholder_text, x_pos_ndc, y_pos_ndc, width, height);
-    IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
 
     input_boxes.emplace_back(on_confirm, ivpsc, ivpt, placeholder_text, "", regular_color, focused_color, rect);
 };
