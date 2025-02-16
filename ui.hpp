@@ -144,7 +144,6 @@ class UI {
   public:
     UI(const FontAtlas &font_atlas) : font_atlas(font_atlas) {};
 
-    glm::vec2 get_ndc_mouse_pos(unsigned int window_width, unsigned int window_height, double xpos, double ypos);
     void process_mouse_position(const glm::vec2 &mouse_pos_ndc);
     void process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc);
     void process_key_press(const std::string &character_pressed);
@@ -237,5 +236,59 @@ class UI {
     std::vector<UITextBox> text_boxes;
     std::vector<UIInputBox> input_boxes;
 };
+
+/**
+ * @class IUIRenderSuite
+ * @brief Interface for UI rendering operations.
+ */
+class IUIRenderSuite {
+  public:
+    virtual ~IUIRenderSuite() = default;
+
+    /**
+     * @brief Render a colored box.
+     * @param cb The UIRect containing rendering data.
+     */
+    virtual void render_colored_box(const UIRect &cb) = 0;
+
+    /**
+     * @brief Render a text box.
+     * @param tb The UITextBox containing text and background data.
+     */
+    virtual void render_text_box(const UITextBox &tb) = 0;
+
+    /**
+     * @brief Render a clickable text box.
+     * @param cr The UIClickableTextBox containing text and background data.
+     */
+    virtual void render_clickable_text_box(const UIClickableTextBox &cr) = 0;
+
+    /**
+     * @brief Render an input box.
+     * @param ib The UIInputBox containing text and background data.
+     */
+    virtual void render_input_box(const UIInputBox &ib) = 0;
+
+    /**
+     * @brief Render a dropdown menu.
+     * @param dd The UIDropdown containing text and background data.
+     */
+    virtual void render_dropdown(const UIDropdown &dd) = 0;
+
+    /**
+     * @brief Render a dropdown option.
+     * @param dd The UIDropdown containing the dropdown state.
+     * @param ivpsc The solid color data.
+     * @param ivpt The textured data.
+     * @param doid The ID for the dropdown option.
+     */
+    virtual void render_dropdown_option(const UIDropdown &dd, const draw_info::IVPSolidColor &ivpsc,
+                                        const draw_info::IVPTextured &ivpt, unsigned int doid) = 0;
+};
+
+void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRenderSuite &ui_render_suite,
+                                 const std::vector<std::string> &key_strings_just_pressed,
+                                 bool delete_action_just_pressed, bool confirm_action_just_pressed,
+                                 bool mouse_just_clicked);
 
 #endif // UI_HPP

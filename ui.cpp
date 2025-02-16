@@ -1,9 +1,5 @@
 #include "ui.hpp"
 
-glm::vec2 UI::get_ndc_mouse_pos(unsigned int window_width, unsigned int window_height, double xpos, double ypos) {
-    return {(2.0f * xpos) / window_width - 1.0f, 1.0f - (2.0f * ypos) / window_height};
-}
-
 bool is_point_in_rectangle(const vertex_geometry::Rectangle &rect, const glm::vec2 &point) {
     float half_width = rect.width / 2.0f;
     float half_height = rect.height / 2.0f;
@@ -422,3 +418,59 @@ const std::vector<UIDropdown> &UI::get_dropdowns() const { return dropdowns; }
 const std::vector<UIInputBox> &UI::get_input_boxes() const { return input_boxes; }
 const std::vector<UITextBox> &UI::get_text_boxes() const { return text_boxes; }
 const std::vector<UIRect> &UI::get_colored_boxes() const { return rectangles; }
+
+void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRenderSuite &ui_render_suite,
+                                 const std::vector<std::string> &key_strings_just_pressed,
+                                 bool delete_action_just_pressed, bool confirm_action_just_pressed,
+                                 bool mouse_just_clicked) {
+
+    curr_ui.process_mouse_position(ndc_mouse_pos);
+    for (const auto &key_str : key_strings_just_pressed) {
+        curr_ui.process_key_press(key_str);
+    }
+
+    if (delete_action_just_pressed) {
+        curr_ui.process_delete_action();
+    }
+
+    if (confirm_action_just_pressed) {
+        curr_ui.process_confirm_action();
+    }
+
+    if (mouse_just_clicked) {
+        curr_ui.process_mouse_just_clicked(ndc_mouse_pos);
+    }
+
+    for (auto &cb : curr_ui.get_colored_boxes()) {
+        ui_render_suite.render_colored_box(cb);
+    }
+
+    for (auto &tb : curr_ui.get_text_boxes()) {
+        ui_render_suite.render_text_box(tb);
+    }
+
+    for (auto &cr : curr_ui.get_clickable_text_boxes()) {
+        ui_render_suite.render_clickable_text_box(cr);
+    }
+
+    for (auto &ib : curr_ui.get_input_boxes()) {
+        ui_render_suite.render_input_box(ib);
+    }
+
+    for (auto &dd : curr_ui.get_dropdowns()) {
+        ui_render_suite.render_dropdown(dd);
+
+        // render all the dropdown options if the parent dropdown is activated
+        // TODO: needs to work better
+        if (dd.dropdown_open) {
+            int num_dropdowns = dd.dropdown_option_rects.size();
+            for (int i = 0; i < num_dropdowns; i++) {
+                draw_info::IVPSolidColor ivpsc = dd.dropdown_option_backgrounds[i];
+                draw_info::IVPTextured ivpt = dd.dropdown_option_text_data[i];
+                unsigned int doid = dd.dropdown_doids[i];
+
+                ui_render_suite.render_dropdown_option(dd, ivpsc, ivpt, doid);
+            }
+        }
+    }
+}
