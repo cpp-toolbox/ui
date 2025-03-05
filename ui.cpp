@@ -220,7 +220,10 @@ int UI::add_textbox(const std::string &text, vertex_geometry::Rectangle ndc_text
 
 int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float center_y_pos_ndc, float width, float height,
                     const glm::vec3 &normalized_rgb) {
-
+    // WARN: we use this doid for two objects which would be bad if they were drawn using the same shader
+    // since we use abs pos for rects and sdf shader for font then this is alright, but in any other
+    // case it would cause problems in the batcher because they would have the samd doid
+    int textbox_doid = UniqueIDGenerator::generate();
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices(center_x_pos_ndc, center_y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
@@ -230,11 +233,11 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     // adding rectangles so taht we can check for intersection easier.
     glm::vec3 center(center_x_pos_ndc, center_y_pos_ndc, 0);
     vertex_geometry::Rectangle bounding_rect(center, width, height);
-    rectangles.emplace_back(ivpsc);
+    rectangles.emplace_back(ivpsc, textbox_doid);
     TextMesh tm =
         font_atlas.generate_text_mesh_size_constraints(text, center_x_pos_ndc, center_y_pos_ndc, width, height);
     draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
-    UITextBox tb(ivpsc, ivpt, bounding_rect);
+    UITextBox tb(ivpsc, ivpt, bounding_rect, textbox_doid);
     text_boxes.emplace_back(tb);
     return tb.id;
 };
@@ -339,14 +342,25 @@ bool UI::remove_clickable_textbox(int do_id) {
 }
 
 bool UI::remove_textbox(int do_id) {
-    auto it =
+    auto text_it =
         std::find_if(text_boxes.begin(), text_boxes.end(), [do_id](const UITextBox &obj) { return obj.id == do_id; });
 
-    if (it != text_boxes.end()) {
-        text_boxes.erase(it);
-        return true; // Object was found and removed
+    auto rect_it =
+        std::find_if(rectangles.begin(), rectangles.end(), [do_id](const UIRect &rect) { return rect.id == do_id; });
+
+    bool removed = false;
+
+    if (text_it != text_boxes.end()) {
+        text_boxes.erase(text_it);
+        removed = true;
     }
-    return false; // Object not found
+
+    if (rect_it != rectangles.end()) {
+        rectangles.erase(rect_it);
+        removed = true;
+    }
+
+    return removed; // True if at least one object was removed
 }
 
 int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
