@@ -37,7 +37,7 @@ struct UIRect {
     bool mouse_above = false;
     TemporalBinarySignal modified_signal;
 
-    UIRect(draw_info::IVPSolidColor ivpsc, int id = UniqueIDGenerator::generate()) : id(id), ivpsc(ivpsc) {}
+    UIRect(draw_info::IVPSolidColor ivpsc, int id = GlobalUIDGenerator::get_id()) : id(id), ivpsc(ivpsc) {}
 };
 
 struct UITextBox {
@@ -49,7 +49,7 @@ struct UITextBox {
     TemporalBinarySignal modified_signal;
 
     UITextBox(draw_info::IVPSolidColor background_ivpsc, draw_info::IVPTextured text_drawing_data,
-              vertex_geometry::Rectangle bounding_rect, int id = UniqueIDGenerator::generate())
+              vertex_geometry::Rectangle bounding_rect, int id = GlobalUIDGenerator::get_id())
         : background_ivpsc(background_ivpsc), text_drawing_data(text_drawing_data), bounding_rect(bounding_rect),
           id(id) {};
 };
@@ -68,7 +68,7 @@ struct UIClickableTextBox {
 
     UIClickableTextBox(std::function<void()> on_click, std::function<void()> on_hover, draw_info::IVPSolidColor ivpsc,
                        draw_info::IVPTextured text_drawing_data, glm::vec3 regular_color, glm::vec3 hover_color,
-                       vertex_geometry::Rectangle rect, int id = UniqueIDGenerator::generate())
+                       vertex_geometry::Rectangle rect, int id = GlobalUIDGenerator::get_id())
         : on_click(on_click), on_hover(on_hover), ivpsc(ivpsc), text_drawing_data(text_drawing_data),
           regular_color(regular_color), hover_color(hover_color), rect(rect), id(id) {}
 };
@@ -106,7 +106,7 @@ struct UIDropdown {
                std::vector<std::string> dropdown_options, std::vector<std::function<void()>> dropdown_option_on_clicks,
                std::vector<draw_info::IVPSolidColor> dropdown_option_backgrounds,
                std::vector<draw_info::IVPTextured> dropdown_option_text_data,
-               std::vector<vertex_geometry::Rectangle> dropdown_option_rects, int id = UniqueIDGenerator::generate())
+               std::vector<vertex_geometry::Rectangle> dropdown_option_rects, int id = GlobalUIDGenerator::get_id())
         : on_click(on_click), on_hover(on_hover), dropdown_background(dropdown_background),
           dropdown_text_data(dropdown_text_data), regular_color(regular_color), hover_color(hover_color),
           dropdown_rect(dropdown_rect), dropdown_options(dropdown_options),
@@ -116,7 +116,7 @@ struct UIDropdown {
         // TODO we're running under the assumption that every dropdown will have at least one option
         active_selection = dropdown_options.at(0);
         for (int i = 0; i < dropdown_options.size(); i++) {
-            dropdown_doids.push_back(UniqueIDGenerator::generate());
+            dropdown_doids.push_back(GlobalUIDGenerator::get_id());
         }
     }
 };
@@ -137,7 +137,7 @@ struct UIInputBox {
     UIInputBox(std::function<void(std::string)> on_confirm, draw_info::IVPSolidColor background_ivpsc,
                draw_info::IVPTextured text_drawing_data, std::string placeholder_text, std::string contents,
                glm::vec3 regular_color, glm::vec3 focused_color, vertex_geometry::Rectangle rect,
-               int id = UniqueIDGenerator::generate())
+               int id = GlobalUIDGenerator::get_id())
         : on_confirm(on_confirm), background_ivpsc(background_ivpsc), text_drawing_data(text_drawing_data),
           placeholder_text(placeholder_text), contents(contents), regular_color(regular_color),
           focused_color(focused_color), rect(rect), id(id) {}
@@ -145,7 +145,16 @@ struct UIInputBox {
 
 class UI {
   public:
-    UI(const FontAtlas &font_atlas) : font_atlas(font_atlas) {};
+    UI(const FontAtlas &font_atlas, UniqueIDGenerator &abs_pos_object_id_generator,
+       UniqueIDGenerator &sdf_object_id_generator)
+        : font_atlas(font_atlas), abs_pos_object_id_generator(abs_pos_object_id_generator),
+          sdf_object_id_generator(sdf_object_id_generator) {};
+
+    UniqueIDGenerator ui_id_generator;
+
+    // TODO: I don't like that these are here, but I don't really have a choice right now correct?
+    UniqueIDGenerator &abs_pos_object_id_generator;
+    UniqueIDGenerator &sdf_object_id_generator;
 
     void process_mouse_position(const glm::vec2 &mouse_pos_ndc);
     void process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc);

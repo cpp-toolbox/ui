@@ -220,26 +220,30 @@ int UI::add_textbox(const std::string &text, vertex_geometry::Rectangle ndc_text
 
 int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float center_y_pos_ndc, float width, float height,
                     const glm::vec3 &normalized_rgb) {
-    // WARN: we use this doid for two objects which would be bad if they were drawn using the same shader
-    // since we use abs pos for rects and sdf shader for font then this is alright, but in any other
-    // case it would cause problems in the batcher because they would have the samd doid
-    int textbox_doid = UniqueIDGenerator::generate();
+
+    int textbox_id = ui_id_generator.get_id();
+    int rect_id = abs_pos_object_id_generator.get_id();
+    int text_data_id = sdf_object_id_generator.get_id();
+
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices(center_x_pos_ndc, center_y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
+    // TODO: do we really need this, we're already storing this in two places!
+    rectangles.emplace_back(ivpsc, rect_id);
 
-    draw_info::IVPSolidColor ivpsc(is, vs, cs);
-
-    // adding rectangles so taht we can check for intersection easier.
+    // NOTE: adding rectangles so that we can check for intersection easier
     glm::vec3 center(center_x_pos_ndc, center_y_pos_ndc, 0);
     vertex_geometry::Rectangle bounding_rect(center, width, height);
-    rectangles.emplace_back(ivpsc, textbox_doid);
     TextMesh tm =
         font_atlas.generate_text_mesh_size_constraints(text, center_x_pos_ndc, center_y_pos_ndc, width, height);
-    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
-    UITextBox tb(ivpsc, ivpt, bounding_rect, textbox_doid);
+    // TODO: think about why "" is ok as a texture here and then explain why when you know
+    draw_info::IVPTextured text_ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", text_data_id);
+
+    UITextBox tb(ivpsc, text_ivpt, bounding_rect, text_data_id);
     text_boxes.emplace_back(tb);
-    return tb.id;
+
+    return textbox_id;
 };
 
 void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
@@ -342,6 +346,9 @@ bool UI::remove_clickable_textbox(int do_id) {
 }
 
 bool UI::remove_textbox(int do_id) {
+
+    ui_id_generator.reclaim_id(do_id);
+
     auto text_it =
         std::find_if(text_boxes.begin(), text_boxes.end(), [do_id](const UITextBox &obj) { return obj.id == do_id; });
 
@@ -360,7 +367,7 @@ bool UI::remove_textbox(int do_id) {
         removed = true;
     }
 
-    return removed; // True if at least one object was removed
+    return removed;
 }
 
 int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
