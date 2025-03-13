@@ -230,7 +230,7 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
     draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
     // TODO: do we really need this, we're already storing this in two places!
-    rectangles.emplace_back(ivpsc, rect_id);
+    rectangles.emplace_back(ivpsc, textbox_id); // used here
 
     // NOTE: adding rectangles so that we can check for intersection easier
     glm::vec3 center(center_x_pos_ndc, center_y_pos_ndc, 0);
@@ -240,7 +240,7 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     // TODO: think about why "" is ok as a texture here and then explain why when you know
     draw_info::IVPTextured text_ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", text_data_id);
 
-    UITextBox tb(ivpsc, text_ivpt, bounding_rect, text_data_id);
+    UITextBox tb(ivpsc, text_ivpt, bounding_rect, textbox_id); // used here
     text_boxes.emplace_back(tb);
 
     return textbox_id;
@@ -262,8 +262,8 @@ void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
 }
 
 UITextBox *UI::get_textbox(int doid) {
-    auto it =
-        std::find_if(text_boxes.begin(), text_boxes.end(), [doid](const UITextBox &obj) { return obj.id == doid; });
+    auto it = std::find_if(text_boxes.begin(), text_boxes.end(),
+                           [doid](const UITextBox &obj) { return obj.parent_ui_id == doid; });
 
     if (it != text_boxes.end()) {
         return &(*it);
@@ -349,11 +349,11 @@ bool UI::remove_textbox(int do_id) {
 
     ui_id_generator.reclaim_id(do_id);
 
-    auto text_it =
-        std::find_if(text_boxes.begin(), text_boxes.end(), [do_id](const UITextBox &obj) { return obj.id == do_id; });
+    auto text_it = std::find_if(text_boxes.begin(), text_boxes.end(),
+                                [do_id](const UITextBox &obj) { return obj.parent_ui_id == do_id; });
 
-    auto rect_it =
-        std::find_if(rectangles.begin(), rectangles.end(), [do_id](const UIRect &rect) { return rect.id == do_id; });
+    auto rect_it = std::find_if(rectangles.begin(), rectangles.end(),
+                                [do_id](const UIRect &rect) { return rect.parent_ui_id == do_id; });
 
     bool removed = false;
 

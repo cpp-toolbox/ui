@@ -32,16 +32,16 @@ struct FileBrowser {
 };
 
 struct UIRect {
-    int id;
+    int parent_ui_id;
     draw_info::IVPSolidColor ivpsc;
     bool mouse_above = false;
     TemporalBinarySignal modified_signal;
 
-    UIRect(draw_info::IVPSolidColor ivpsc, int id = GlobalUIDGenerator::get_id()) : id(id), ivpsc(ivpsc) {}
+    UIRect(draw_info::IVPSolidColor ivpsc, int id = GlobalUIDGenerator::get_id()) : parent_ui_id(id), ivpsc(ivpsc) {}
 };
 
 struct UITextBox {
-    int id;
+    int parent_ui_id;
     draw_info::IVPSolidColor background_ivpsc;
     draw_info::IVPTextured text_drawing_data;
     vertex_geometry::Rectangle bounding_rect;
@@ -51,7 +51,7 @@ struct UITextBox {
     UITextBox(draw_info::IVPSolidColor background_ivpsc, draw_info::IVPTextured text_drawing_data,
               vertex_geometry::Rectangle bounding_rect, int id = GlobalUIDGenerator::get_id())
         : background_ivpsc(background_ivpsc), text_drawing_data(text_drawing_data), bounding_rect(bounding_rect),
-          id(id) {};
+          parent_ui_id(id) {};
 };
 
 struct UIClickableTextBox {
