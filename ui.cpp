@@ -256,7 +256,8 @@ void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
             new_text, textbox->bounding_rect.center.x, textbox->bounding_rect.center.y, textbox->bounding_rect.width,
             textbox->bounding_rect.height);
 
-        textbox->text_drawing_data = draw_info::IVPTextured(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+        // NOTE: we re-use the doid to avoid a ivp leak
+        textbox->text_drawing_data = draw_info::IVPTextured(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", doid);
         textbox->modified_signal.toggle_state();
     }
 }
