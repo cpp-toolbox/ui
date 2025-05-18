@@ -177,8 +177,10 @@ class UI {
                     const glm::vec3 &normalized_rgb);
 
     void modify_text_of_a_textbox(int doid, std::string new_text);
+    void modify_colored_rectangle(int doid, vertex_geometry::Rectangle ndc_rectangle);
 
     UITextBox *get_textbox(int doid);
+    UIRect *get_colored_rectangle(int doid);
 
     /* why we pass our fucntions by reference:
      * Capturing State in Lambdas:

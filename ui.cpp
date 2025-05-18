@@ -193,8 +193,9 @@ void UI::add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, fl
                                const glm::vec3 &normalized_rgb) {
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
+    int rect_id = abs_pos_object_id_generator.get_id();
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
-    draw_info::IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
     rectangles.emplace_back(ivpsc);
 }
 /*void UI::add_clickable_colored_rectangle(std::function<void()> on_click, float x_pos_ndc, float y_pos_ndc, float
@@ -221,7 +222,9 @@ int UI::add_textbox(const std::string &text, vertex_geometry::Rectangle ndc_text
 int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float center_y_pos_ndc, float width, float height,
                     const glm::vec3 &normalized_rgb) {
 
+    // this id is for grabbing an element from the UI object
     int textbox_id = ui_id_generator.get_id();
+    // these are internal ones used to clean up UI elements when deleted.
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = sdf_object_id_generator.get_id();
 
@@ -256,9 +259,24 @@ void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
             new_text, textbox->bounding_rect.center.x, textbox->bounding_rect.center.y, textbox->bounding_rect.width,
             textbox->bounding_rect.height);
 
-        // NOTE: we re-use the doid to avoid a ivp leak
-        textbox->text_drawing_data = draw_info::IVPTextured(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", doid);
+        // NOTE: we re-use the drawing data id to avoid a ivp leak, else we'd have to delete and regenerate which we
+        // won't do.
+        textbox->text_drawing_data = draw_info::IVPTextured(tm.indices, tm.vertex_positions, tm.texture_coordinates, "",
+                                                            textbox->text_drawing_data.id);
         textbox->modified_signal.toggle_state();
+    }
+}
+
+void UI::modify_colored_rectangle(int doid, vertex_geometry::Rectangle ndc_rectangle) {
+    // Find the textbox with the given ID
+    UIRect *colored_rectangle = get_colored_rectangle(doid);
+
+    if (colored_rectangle != nullptr) {
+        // Modify the text mesh with the new text
+
+        // indices don't have to change
+        colored_rectangle->ivpsc.xyz_positions = ndc_rectangle.get_ivs().vertices;
+        colored_rectangle->modified_signal.toggle_state();
     }
 }
 
@@ -267,6 +285,15 @@ UITextBox *UI::get_textbox(int doid) {
                            [doid](const UITextBox &obj) { return obj.parent_ui_id == doid; });
 
     if (it != text_boxes.end()) {
+        return &(*it);
+    }
+    return nullptr;
+}
+
+UIRect *UI::get_colored_rectangle(int doid) {
+    auto it = std::find_if(rectangles.begin(), rectangles.end(),
+                           [doid](const UIRect &obj) { return obj.parent_ui_id == doid; });
+    if (it != rectangles.end()) {
         return &(*it);
     }
     return nullptr;
