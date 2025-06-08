@@ -43,14 +43,14 @@ struct UIRect {
 struct UITextBox {
     int parent_ui_id;
     draw_info::IVPSolidColor background_ivpsc;
-    draw_info::IVPTextured text_drawing_data;
+    draw_info::IVPSolidColor text_drawing_ivpsc;
     vertex_geometry::Rectangle bounding_rect;
     bool mouse_above = false;
     TemporalBinarySignal modified_signal;
 
-    UITextBox(draw_info::IVPSolidColor background_ivpsc, draw_info::IVPTextured text_drawing_data,
+    UITextBox(draw_info::IVPSolidColor background_ivpsc, draw_info::IVPSolidColor text_drawing_data,
               vertex_geometry::Rectangle bounding_rect, int id = GlobalUIDGenerator::get_id())
-        : background_ivpsc(background_ivpsc), text_drawing_data(text_drawing_data), bounding_rect(bounding_rect),
+        : background_ivpsc(background_ivpsc), text_drawing_ivpsc(text_drawing_data), bounding_rect(bounding_rect),
           parent_ui_id(id) {};
 };
 
@@ -59,7 +59,7 @@ struct UIClickableTextBox {
     std::function<void()> on_click;
     std::function<void()> on_hover;
     draw_info::IVPSolidColor ivpsc;
-    draw_info::IVPTextured text_drawing_data;
+    draw_info::IVPSolidColor text_drawing_ivpsc;
     glm::vec3 regular_color;
     glm::vec3 hover_color;
     vertex_geometry::Rectangle rect;
@@ -67,9 +67,9 @@ struct UIClickableTextBox {
     TemporalBinarySignal modified_signal;
 
     UIClickableTextBox(std::function<void()> on_click, std::function<void()> on_hover, draw_info::IVPSolidColor ivpsc,
-                       draw_info::IVPTextured text_drawing_data, glm::vec3 regular_color, glm::vec3 hover_color,
+                       draw_info::IVPSolidColor text_drawing_data, glm::vec3 regular_color, glm::vec3 hover_color,
                        vertex_geometry::Rectangle rect, int id = GlobalUIDGenerator::get_id())
-        : on_click(on_click), on_hover(on_hover), ivpsc(ivpsc), text_drawing_data(text_drawing_data),
+        : on_click(on_click), on_hover(on_hover), ivpsc(ivpsc), text_drawing_ivpsc(text_drawing_data),
           regular_color(regular_color), hover_color(hover_color), rect(rect), id(id) {}
 };
 
@@ -84,15 +84,15 @@ struct UIDropdown {
     std::function<void()> on_click;
     std::function<void()> on_hover;
     draw_info::IVPSolidColor dropdown_background;
-    draw_info::IVPTextured dropdown_text_data;
+    draw_info::IVPSolidColor dropdown_text_ivpsc;
     vertex_geometry::Rectangle dropdown_rect;
 
     // a vector because we have one for each dropdown elt
     std::vector<std::function<void()>> dropdown_option_on_clicks;
     std::vector<std::function<void()>> dropdown_option_on_hovers;
     std::vector<vertex_geometry::Rectangle> dropdown_option_rects;
-    std::vector<draw_info::IVPSolidColor> dropdown_option_backgrounds;
-    std::vector<draw_info::IVPTextured> dropdown_option_text_data;
+    std::vector<draw_info::IVPSolidColor> dropdown_option_background_ivpsc;
+    std::vector<draw_info::IVPSolidColor> dropdown_option_text_ivpsc;
     std::vector<std::string> dropdown_options;
     std::vector<unsigned int> dropdown_doids;
 
@@ -101,19 +101,20 @@ struct UIDropdown {
     TemporalBinarySignal modified_signal;
 
     UIDropdown(std::function<void()> on_click, std::function<void()> on_hover,
-               draw_info::IVPSolidColor dropdown_background, draw_info::IVPTextured dropdown_text_data,
+               draw_info::IVPSolidColor dropdown_background, draw_info::IVPSolidColor dropdown_text_data,
                glm::vec3 regular_color, glm::vec3 hover_color, vertex_geometry::Rectangle dropdown_rect,
                std::vector<std::string> dropdown_options, std::vector<std::function<void()>> dropdown_option_on_clicks,
                std::vector<draw_info::IVPSolidColor> dropdown_option_backgrounds,
-               std::vector<draw_info::IVPTextured> dropdown_option_text_data,
+               std::vector<draw_info::IVPSolidColor> dropdown_option_text_data,
                std::vector<vertex_geometry::Rectangle> dropdown_option_rects, int id = GlobalUIDGenerator::get_id())
         : on_click(on_click), on_hover(on_hover), dropdown_background(dropdown_background),
-          dropdown_text_data(dropdown_text_data), regular_color(regular_color), hover_color(hover_color),
+          dropdown_text_ivpsc(dropdown_text_data), regular_color(regular_color), hover_color(hover_color),
           dropdown_rect(dropdown_rect), dropdown_options(dropdown_options),
           dropdown_option_on_clicks(dropdown_option_on_clicks),
-          dropdown_option_backgrounds(dropdown_option_backgrounds),
-          dropdown_option_text_data(dropdown_option_text_data), dropdown_option_rects(dropdown_option_rects), id(id) {
+          dropdown_option_background_ivpsc(dropdown_option_backgrounds),
+          dropdown_option_text_ivpsc(dropdown_option_text_data), dropdown_option_rects(dropdown_option_rects), id(id) {
         // TODO we're running under the assumption that every dropdown will have at least one option
+        // NOTE: I didn't think about this but this is probably legacy and can be removed
         active_selection = dropdown_options.at(0);
         for (int i = 0; i < dropdown_options.size(); i++) {
             dropdown_doids.push_back(GlobalUIDGenerator::get_id());
@@ -125,7 +126,7 @@ struct UIInputBox {
     int id;
     std::function<void(std::string)> on_confirm;
     draw_info::IVPSolidColor background_ivpsc;
-    draw_info::IVPTextured text_drawing_data;
+    draw_info::IVPSolidColor text_drawing_ivpsc;
     std::string placeholder_text;
     std::string contents;
     glm::vec3 regular_color;
@@ -135,26 +136,32 @@ struct UIInputBox {
     TemporalBinarySignal modified_signal;
 
     UIInputBox(std::function<void(std::string)> on_confirm, draw_info::IVPSolidColor background_ivpsc,
-               draw_info::IVPTextured text_drawing_data, std::string placeholder_text, std::string contents,
+               draw_info::IVPSolidColor text_drawing_data, std::string placeholder_text, std::string contents,
                glm::vec3 regular_color, glm::vec3 focused_color, vertex_geometry::Rectangle rect,
                int id = GlobalUIDGenerator::get_id())
-        : on_confirm(on_confirm), background_ivpsc(background_ivpsc), text_drawing_data(text_drawing_data),
+        : on_confirm(on_confirm), background_ivpsc(background_ivpsc), text_drawing_ivpsc(text_drawing_data),
           placeholder_text(placeholder_text), contents(contents), regular_color(regular_color),
           focused_color(focused_color), rect(rect), id(id) {}
 };
 
+// we work in ndc space, and so z layer refers to what z layer we're on, by default we have 20 z layers of the form
+// -1, -0.9, -0.8, ..., -0.1, 0, 0.1, 0.2, 0.3, ... 0.9, 1
+// each UI owns the space from its z layer to the next z layer, so for example if you create a UI with z layer 0, then
+// it owns the space from 0 to 0.1 and thus all the numbers like 0.01, 0.02, 0.03, 0.04, ... 0.09 are all bandwiths you
+// can do stuff on safely and not hit the next z layer.
 class UI {
   public:
-    UI(const FontAtlas &font_atlas, UniqueIDGenerator &abs_pos_object_id_generator,
-       UniqueIDGenerator &sdf_object_id_generator)
-        : font_atlas(font_atlas), abs_pos_object_id_generator(abs_pos_object_id_generator),
-          sdf_object_id_generator(sdf_object_id_generator) {};
+    UI(float z_layer, UniqueIDGenerator &abs_pos_object_id_generator)
+        : z_layer(z_layer), background_layer(z_layer - 0.01), text_layer(z_layer - 0.02),
+          dropdown_background_layer(z_layer - 0.03), dropdown_text_layer(z_layer - 0.04),
+          abs_pos_object_id_generator(abs_pos_object_id_generator) {};
+
+    float z_layer, background_layer, text_layer, dropdown_background_layer, dropdown_text_layer;
 
     UniqueIDGenerator ui_id_generator;
 
     // TODO: I don't like that these are here, but I don't really have a choice right now correct?
     UniqueIDGenerator &abs_pos_object_id_generator;
-    UniqueIDGenerator &sdf_object_id_generator;
 
     void process_mouse_position(const glm::vec2 &mouse_pos_ndc);
     void process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc);
@@ -210,15 +217,6 @@ class UI {
     bool remove_textbox(int do_id);
     UIClickableTextBox *get_clickable_textbox(int do_id);
 
-    // same version without function references, so we can create generic throwaway functions if we need to
-    void add_clickable_textbox_copy_fun(std::function<void()> on_click, std::function<void()> on_hover,
-                                        const std::string &text, vertex_geometry::Rectangle &rect,
-                                        const glm::vec3 &regular_color, const glm::vec3 &hover_color);
-
-    void add_clickable_textbox_copy_fun(std::function<void()> on_click, std::function<void()> on_hover,
-                                        const std::string &text, float x_pos_ndc, float y_pos_ndc, float width,
-                                        float height, const glm::vec3 &regular_color, const glm::vec3 &hover_color);
-
     void add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
                        const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color);
@@ -238,7 +236,6 @@ class UI {
     const std::vector<UIRect> &get_colored_boxes() const;
 
   private:
-    FontAtlas font_atlas;
     void disable_focus_on_all_input_boxes();
 
     std::vector<draw_info::IVPTextured> drawable_text_information;
@@ -296,7 +293,7 @@ class IUIRenderSuite {
      * @param doid The ID for the dropdown option.
      */
     virtual void render_dropdown_option(const UIDropdown &dd, const draw_info::IVPSolidColor &ivpsc,
-                                        const draw_info::IVPTextured &ivpt, unsigned int doid) = 0;
+                                        const draw_info::IVPSolidColor &text_ivspc, unsigned int doid) = 0;
 };
 
 void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRenderSuite &ui_render_suite,
