@@ -68,10 +68,13 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 std::cout << "clicked in input box" << std::endl;
                 std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.focused_color);
                 ib.background_ivpsc.rgb_colors = cs;
-                // blank out the text box on click
+
+                // this blanks out the text box on click, because contents is empty at first
                 TextMesh tm = font_atlas.generate_text_mesh_size_constraints(
                     ib.contents, ib.rect.center.x, ib.rect.center.y, ib.rect.width, ib.rect.height);
-                draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+                // note that we use the same id here and use a toggle signal to replace
+                draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "",
+                                            ib.text_drawing_data.id);
                 ib.text_drawing_data = ivpt;
                 ib.focused = true;
                 ib.modified_signal.toggle_state();
@@ -85,7 +88,8 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 if (ib.contents.size() == 0) { // put back placeholder
                     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(
                         ib.placeholder_text, ib.rect.center.x, ib.rect.center.y, ib.rect.width, ib.rect.height);
-                    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+                    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "",
+                                                ib.text_drawing_data.id);
                     ib.text_drawing_data = ivpt;
                 }
                 ib.modified_signal.toggle_state();
@@ -104,7 +108,8 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 dd.dropdown_background.rgb_colors = cs;
                 // blank out the text box on click
                 TextMesh tm = font_atlas.generate_text_mesh_size_constraints(dd.active_selection, dd.dropdown_rect);
-                draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+                draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "",
+                                            dd.dropdown_text_data.id);
                 dd.dropdown_text_data = ivpt;
                 dd.dropdown_open = true;
                 dd.modified_signal.toggle_state();
@@ -191,12 +196,18 @@ void UI::add_colored_rectangle(vertex_geometry::Rectangle ndc_rectangle, const g
 
 void UI::add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, float height,
                                const glm::vec3 &normalized_rgb) {
+
+    int element_id = ui_id_generator.get_id();
+
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     int rect_id = abs_pos_object_id_generator.get_id();
+
+    std::cout << "adding colored rectangle with element id: " << element_id << "rect_id: " << rect_id << std::endl;
+
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
     draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
-    rectangles.emplace_back(ivpsc);
+    rectangles.emplace_back(ivpsc, element_id);
 }
 /*void UI::add_clickable_colored_rectangle(std::function<void()> on_click, float x_pos_ndc, float y_pos_ndc, float
  * width,*/
@@ -223,30 +234,38 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
                     const glm::vec3 &normalized_rgb) {
 
     // this id is for grabbing an element from the UI object
-    int textbox_id = ui_id_generator.get_id();
+    int element_id = ui_id_generator.get_id();
     // these are internal ones used to clean up UI elements when deleted.
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = sdf_object_id_generator.get_id();
+
+    std::cout << "adding textbox with contents: " << text << " and element id " << element_id << "rect_id: " << rect_id
+              << " text_data_id: " << text_data_id << std::endl;
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices(center_x_pos_ndc, center_y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
     draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
-    // TODO: do we really need this, we're already storing this in two places!
-    rectangles.emplace_back(ivpsc, textbox_id); // used here
+
+    // TODO: do we really need this, we're already storing this in two places! that's why the below line is commented
+    // the problem is that in the renderer we will iterate over the rectangles and  textboxes elements the problem is
+    // that when we store in two places whichever one is selected last will be rendered first causing the issue because
+    // they use the same rect id
+    //    rectangles.emplace_back(ivpsc, element_id); // used here
 
     // NOTE: adding rectangles so that we can check for intersection easier
     glm::vec3 center(center_x_pos_ndc, center_y_pos_ndc, 0);
     vertex_geometry::Rectangle bounding_rect(center, width, height);
     TextMesh tm =
         font_atlas.generate_text_mesh_size_constraints(text, center_x_pos_ndc, center_y_pos_ndc, width, height);
+    vertex_geometry::translate_vertices_in_place(tm.vertex_positions, glm::vec3(0, 0, -0.1));
     // TODO: think about why "" is ok as a texture here and then explain why when you know
     draw_info::IVPTextured text_ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", text_data_id);
 
-    UITextBox tb(ivpsc, text_ivpt, bounding_rect, textbox_id); // used here
+    UITextBox tb(ivpsc, text_ivpt, bounding_rect, element_id); // used here
     text_boxes.emplace_back(tb);
 
-    return textbox_id;
+    return element_id;
 };
 
 void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
@@ -304,35 +323,53 @@ int UI::add_dropdown(std::function<void()> &on_click, std::function<void()> &on_
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
                      std::vector<std::function<void()>> option_on_clicks) {
 
+    // this id is for grabbing an element from the UI object
+    int element_id = ui_id_generator.get_id();
+    // these are internal ones used to clean up UI elements when deleted.
+    int rect_id = abs_pos_object_id_generator.get_id();
+    int text_data_id = sdf_object_id_generator.get_id();
+
     // main dropdown button
     auto ivs = rect.get_ivs();
     auto is = ivs.indices;
     auto vs = ivs.vertices;
+
     std::vector<glm::vec3> cs(vs.size(), regular_color);
-    draw_info::IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text, rect);
-    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+
+    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", text_data_id);
     // main dropdown button
+
+    std::cout << "adding dropdown with contents: " << text << " with element id: " << element_id
+              << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
 
     // now the dropdown buttons themselves
     std::vector<draw_info::IVPTextured> option_text_data;
     std::vector<draw_info::IVPSolidColor> option_background_rect_data;
-    std::vector<vertex_geometry::Rectangle> dropdown_option_rects;
+    std::vector<vertex_geometry::Rectangle> dropdown_option_rects; // used for mouse click checking
     int i = 1;
     for (const auto &option : options) {
         vertex_geometry::Rectangle option_rect = slide_rectangle(rect, 0, -i);
         dropdown_option_rects.push_back(option_rect);
 
+        int rect_id = abs_pos_object_id_generator.get_id();
+        int text_data_id = sdf_object_id_generator.get_id();
+
         auto ivs = option_rect.get_ivs();
         auto is = ivs.indices;
         auto vs = ivs.vertices;
 
+        // to make it appear on top of other things
+        vertex_geometry::translate_vertices_in_place(vs, glm::vec3(0, 0, -.5));
+
         std::vector<glm::vec3> cs(vs.size(), regular_color);
-        draw_info::IVPSolidColor ivpsc(is, vs, cs);
+        draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
         option_background_rect_data.push_back(ivpsc);
 
         TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text, option_rect);
-        draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+        vertex_geometry::translate_vertices_in_place(tm.vertex_positions, glm::vec3(0, 0, -.5));
+        draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", text_data_id);
         option_text_data.push_back(ivpt);
 
         i += 1;
@@ -401,17 +438,28 @@ bool UI::remove_textbox(int do_id) {
 int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
                               float x_pos_ndc, float y_pos_ndc, float width, float height,
                               const glm::vec3 &regular_color, const glm::vec3 &hover_color) {
+
+    // this id is for grabbing an element from the UI object
+    int element_id = ui_id_generator.get_id();
+    // these are internal ones used to clean up UI elements when deleted.
+    int rect_id = abs_pos_object_id_generator.get_id();
+    int text_data_id = sdf_object_id_generator.get_id();
+
+    std::cout << "adding clickable textbox with text: " << text << " and element id: " << element_id
+              << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
+
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
 
-    draw_info::IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
     vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, 0), width, height);
 
     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(text, x_pos_ndc, y_pos_ndc, width, height);
-    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", text_data_id);
 
-    UIClickableTextBox clickable_text_box(on_click, on_hover, ivpsc, ivpt, regular_color, hover_color, rect);
+    UIClickableTextBox clickable_text_box(on_click, on_hover, ivpsc, ivpt, regular_color, hover_color, rect,
+                                          element_id);
     clickable_text_boxes.emplace_back(clickable_text_box);
     return clickable_text_box.id;
 };
@@ -449,17 +497,28 @@ void UI::add_input_box(std::function<void(std::string)> &on_confirm, const std::
 void UI::add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
                        float x_pos_ndc, float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color) {
+
+    // this id is for grabbing an element from the UI object
+    int element_id = ui_id_generator.get_id();
+    // these are internal ones used to clean up UI elements when deleted.
+    int rect_id = abs_pos_object_id_generator.get_id();
+    int text_data_id = sdf_object_id_generator.get_id();
+
+    std::cout << "adding input box with placeholder text: " << placeholder_text << " and element id: " << element_id
+              << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
+
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
 
-    draw_info::IVPSolidColor ivpsc(is, vs, cs);
+    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
     vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, 0), width, height);
 
     TextMesh tm = font_atlas.generate_text_mesh_size_constraints(placeholder_text, x_pos_ndc, y_pos_ndc, width, height);
-    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);
+    draw_info::IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates, "", text_data_id);
 
-    input_boxes.emplace_back(on_confirm, ivpsc, ivpt, placeholder_text, "", regular_color, focused_color, rect);
+    input_boxes.emplace_back(on_confirm, ivpsc, ivpt, placeholder_text, "", regular_color, focused_color, rect,
+                             element_id);
 };
 
 const std::vector<UIClickableTextBox> &UI::get_clickable_text_boxes() const { return clickable_text_boxes; }
