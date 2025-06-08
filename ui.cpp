@@ -102,17 +102,71 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
     }
 
     already_focused_something = false;
+
+    bool selected_dropdown_option = false;
+    // TODO: process dropdown options
+    for (auto &dd : dropdowns) {
+        if (dd.dropdown_open) {
+            for (int i = 0; i < dd.dropdown_option_rects.size(); i++) {
+
+                auto dropdown_option_rect = dd.dropdown_option_rects.at(i);
+                auto dropdown_on_click = dd.dropdown_option_on_clicks.at(i);
+                auto dropdown_option = dd.dropdown_options.at(i);
+
+                bool clicked_inside = is_point_in_rectangle(dropdown_option_rect, mouse_pos_ndc);
+
+                if (clicked_inside) {
+                    dropdown_on_click(); // TODO: probably has to take in the selected option.
+
+                    dd.active_selection = dropdown_option;
+
+                    // NOTE: potentially make function that updates the main dropdown.
+                    auto layered_rect = dd.dropdown_rect;
+                    layered_rect.center.z = text_layer;
+
+                    draw_info::IndexedVertexPositions text_ivp =
+                        grid_font::get_text_geometry(dd.active_selection, layered_rect);
+                    std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
+                    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
+                                                        dd.dropdown_text_ivpsc.id); // maintining the same id
+
+                    dd.dropdown_text_ivpsc = text_ivpsc;
+                    dd.modified_signal.toggle_state();
+
+                    // we turn off the open dropdown after selecting an option
+                    dd.dropdown_open = false;
+
+                    selected_dropdown_option = true;
+
+                    break;
+                }
+            }
+        }
+    }
+
+    if (selected_dropdown_option) {
+        return;
+    }
+
     for (auto &dd : dropdowns) {
         bool click_inside_box = is_point_in_rectangle(dd.dropdown_rect, mouse_pos_ndc);
-        if (not dd.dropdown_open) {
+
+        if (not dd.dropdown_open) { // if that dropdown is not open, then we can potentially open it
+
             if (not already_focused_something and click_inside_box) {
                 std::cout << "clicked in dropdown" << std::endl;
+
+                // change background color to the hovered color even though its a click (works but bad naming)
                 std::vector<glm::vec3> cs(dd.dropdown_background.xyz_positions.size(), dd.hover_color);
                 dd.dropdown_background.rgb_colors = cs;
+
                 // blank out the text box on click
 
+                auto layered_rect = dd.dropdown_rect;
+                layered_rect.center.z = text_layer;
+
                 draw_info::IndexedVertexPositions text_ivp =
-                    grid_font::get_text_geometry(dd.active_selection, dd.dropdown_rect);
+                    grid_font::get_text_geometry(dd.active_selection, layered_rect);
                 std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
                 draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
                                                     dd.dropdown_text_ivpsc.id); // maintining the same id
@@ -121,11 +175,16 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 dd.dropdown_open = true;
                 dd.modified_signal.toggle_state();
                 already_focused_something = true;
+
+                break;
             }
-        } else {
+        } else { // the current dropdown is already open, so you can either deselect it or select one of its options, in
+                 // either way the dropdown becomes closed I think that makes sense
+
             if (not click_inside_box) {
                 std::cout << "clicked out of input box" << std::endl;
                 dd.dropdown_open = false;
+
                 /*std::vector<glm::vec3> cs(dd.background_ivpsc.xyz_positions.size(), dd.regular_color);*/
                 /*if (dd.contents.size() == 0) { // put back placeholder*/
                 /*    TextMesh tm = font_atlas.generate_text_mesh_size_constraints(*/
