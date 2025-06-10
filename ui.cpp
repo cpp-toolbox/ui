@@ -377,7 +377,7 @@ UIRect *UI::get_colored_rectangle(int doid) {
     return nullptr;
 }
 
-int UI::add_dropdown(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
+int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_hover, const std::string &text,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
                      std::vector<std::function<void()>> option_on_clicks) {
@@ -457,7 +457,7 @@ int UI::add_dropdown(std::function<void()> &on_click, std::function<void()> &on_
 
 // todo we don't need to take in a reference ot a rect to make our lives easier.
 // in the future makt it take a const reference for the future.
-int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
+int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void()> on_hover, const std::string &text,
                               vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                               const glm::vec3 &hover_color) {
     return this->add_clickable_textbox(on_click, on_hover, text, rect.center.x, rect.center.y, rect.width, rect.height,
@@ -510,7 +510,7 @@ bool UI::remove_textbox(int do_id) {
     return removed;
 }
 
-int UI::add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
+int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void()> on_hover, const std::string &text,
                               float x_pos_ndc, float y_pos_ndc, float width, float height,
                               const glm::vec3 &regular_color, const glm::vec3 &hover_color) {
 
@@ -562,11 +562,12 @@ void UI::add_input_box(std::function<void(std::string)> &on_confirm, const std::
               << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
 
     auto is = vertex_geometry::generate_rectangle_indices();
-    auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
+    auto vs =
+        vertex_geometry::generate_rectangle_vertices_with_z(x_pos_ndc, y_pos_ndc, background_layer, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
 
     draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
-    vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, 0), width, height);
+    vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, text_layer), width, height);
 
     draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(placeholder_text, rect);
     std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));

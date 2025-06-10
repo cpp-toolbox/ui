@@ -199,16 +199,22 @@ class UI {
      * (e.g., by using [&] in a lambda). This is particularly relevant if curr_state needs to be updated when a text box
      is clicked.
      */
-    int add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
+
+    /*
+     * we pass by copy here because if the functions go out of scope and we captured by reference, then the references
+     * would no longer exist, that actually happens when you were to create a ui in a function and define the
+     * onclick/onhover functions in there.
+     */
+    int add_clickable_textbox(std::function<void()> on_click, std::function<void()> on_hover, const std::string &text,
                               float x_pos_ndc, float y_pos_ndc, float width, float height,
                               const glm::vec3 &regular_color, const glm::vec3 &hover_color);
 
     // in the future these probably don't have to be nodiscard so long as a I have a method for geting ids back out.
-    int add_clickable_textbox(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
+    int add_clickable_textbox(std::function<void()> on_click, std::function<void()> on_hover, const std::string &text,
                               vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                               const glm::vec3 &hover_color);
 
-    int add_dropdown(std::function<void()> &on_click, std::function<void()> &on_hover, const std::string &text,
+    int add_dropdown(std::function<void()> on_click, std::function<void()> on_hover, const std::string &text,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
                      std::vector<std::function<void()>> option_on_clicks);
