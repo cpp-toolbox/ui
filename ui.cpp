@@ -110,13 +110,12 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
             for (int i = 0; i < dd.dropdown_option_rects.size(); i++) {
 
                 auto dropdown_option_rect = dd.dropdown_option_rects.at(i);
-                auto dropdown_on_click = dd.dropdown_option_on_clicks.at(i);
                 auto dropdown_option = dd.dropdown_options.at(i);
 
                 bool clicked_inside = is_point_in_rectangle(dropdown_option_rect, mouse_pos_ndc);
 
                 if (clicked_inside) {
-                    dropdown_on_click(); // TODO: probably has to take in the selected option.
+                    dd.dropdown_on_click(dropdown_option);
 
                     dd.active_selection = dropdown_option;
 
@@ -377,16 +376,18 @@ UIRect *UI::get_colored_rectangle(int doid) {
     return nullptr;
 }
 
-int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_hover, const std::string &text,
+int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_hover,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
-                     std::vector<std::function<void()>> option_on_clicks) {
+                     std::function<void(std::string)> option_on_click) {
 
     // this id is for grabbing an element from the UI object
     int element_id = ui_id_generator.get_id();
     // these are internal ones used to clean up UI elements when deleted.
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
+
+    std::string text = options[0];
 
     std::cout << "adding main dropdown with contents: " << text << " and element id " << element_id
               << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
@@ -450,7 +451,7 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
     }
 
     UIDropdown dropdown(on_click, on_hover, ivpsc, text_ivpsc, regular_color, hover_color, rect, options,
-                        option_on_clicks, option_background_rect_data, option_text_data, dropdown_option_rects);
+                        option_on_click, option_background_rect_data, option_text_data, dropdown_option_rects);
     dropdowns.emplace_back(dropdown);
     return dropdown.id;
 }

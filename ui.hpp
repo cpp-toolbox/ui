@@ -88,8 +88,9 @@ struct UIDropdown {
     vertex_geometry::Rectangle dropdown_rect;
 
     // a vector because we have one for each dropdown elt
-    std::vector<std::function<void()>> dropdown_option_on_clicks;
-    std::vector<std::function<void()>> dropdown_option_on_hovers;
+
+    std::function<void(std::string)>
+        dropdown_on_click; // this one doesn't use a vector instead it passes in the string of the selected option.
     std::vector<vertex_geometry::Rectangle> dropdown_option_rects;
     std::vector<draw_info::IVPSolidColor> dropdown_option_background_ivpsc;
     std::vector<draw_info::IVPSolidColor> dropdown_option_text_ivpsc;
@@ -103,14 +104,13 @@ struct UIDropdown {
     UIDropdown(std::function<void()> on_click, std::function<void()> on_hover,
                draw_info::IVPSolidColor dropdown_background, draw_info::IVPSolidColor dropdown_text_data,
                glm::vec3 regular_color, glm::vec3 hover_color, vertex_geometry::Rectangle dropdown_rect,
-               std::vector<std::string> dropdown_options, std::vector<std::function<void()>> dropdown_option_on_clicks,
+               std::vector<std::string> dropdown_options, std::function<void(std::string)> dropdown_on_click,
                std::vector<draw_info::IVPSolidColor> dropdown_option_backgrounds,
                std::vector<draw_info::IVPSolidColor> dropdown_option_text_data,
                std::vector<vertex_geometry::Rectangle> dropdown_option_rects, int id = GlobalUIDGenerator::get_id())
         : on_click(on_click), on_hover(on_hover), dropdown_background(dropdown_background),
           dropdown_text_ivpsc(dropdown_text_data), regular_color(regular_color), hover_color(hover_color),
-          dropdown_rect(dropdown_rect), dropdown_options(dropdown_options),
-          dropdown_option_on_clicks(dropdown_option_on_clicks),
+          dropdown_rect(dropdown_rect), dropdown_options(dropdown_options), dropdown_on_click(dropdown_on_click),
           dropdown_option_background_ivpsc(dropdown_option_backgrounds),
           dropdown_option_text_ivpsc(dropdown_option_text_data), dropdown_option_rects(dropdown_option_rects), id(id) {
         // TODO we're running under the assumption that every dropdown will have at least one option
@@ -214,10 +214,10 @@ class UI {
                               vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                               const glm::vec3 &hover_color);
 
-    int add_dropdown(std::function<void()> on_click, std::function<void()> on_hover, const std::string &text,
+    int add_dropdown(std::function<void()> on_click, std::function<void()> on_hover,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
-                     std::vector<std::function<void()>> option_on_clicks);
+                     std::function<void(std::string)> dropdown_on_click);
 
     bool remove_clickable_textbox(int do_id);
     bool remove_textbox(int do_id);
