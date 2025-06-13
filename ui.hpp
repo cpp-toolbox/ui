@@ -2,6 +2,7 @@
 #define UI_HPP
 
 #include <functional>
+#include <glm/fwd.hpp>
 #include <optional>
 #include "sbpt_generated_includes.hpp"
 
@@ -73,6 +74,33 @@ struct UIClickableTextBox {
           regular_color(regular_color), hover_color(hover_color), rect(rect), id(id) {}
 };
 
+struct UIDropdownOption {
+
+    UIDropdownOption(std::string option, glm::vec3 color, glm::vec3 hover_color,
+                     draw_info::IVPSolidColor background_ivpsc, draw_info::IVPSolidColor text_ivpsc,
+                     vertex_geometry::Rectangle rect, std::function<void(const std::string)> on_click,
+                     std::function<void(const std::string)> on_hover)
+        : option(std::move(option)), color(color), hover_color(hover_color),
+          background_ivpsc(std::move(background_ivpsc)), text_ivpsc(std::move(text_ivpsc)), rect(rect),
+          on_click(std::move(on_click)), on_hover(std::move(on_hover)) {}
+
+    std::string option;
+
+    glm::vec3 color;
+    glm::vec3 hover_color;
+
+    draw_info::IVPSolidColor background_ivpsc;
+    draw_info::IVPSolidColor text_ivpsc;
+
+    TemporalBinarySignal modified_signal;
+
+    vertex_geometry::Rectangle rect;
+
+    bool mouse_inside = false;
+    std::function<void(const std::string)> on_click;
+    std::function<void(const std::string)> on_hover;
+};
+
 struct UIDropdown {
     int id;
 
@@ -83,20 +111,14 @@ struct UIDropdown {
 
     std::function<void()> on_click;
     std::function<void()> on_hover;
+
     draw_info::IVPSolidColor dropdown_background;
     draw_info::IVPSolidColor dropdown_text_ivpsc;
     vertex_geometry::Rectangle dropdown_rect;
 
     // a vector because we have one for each dropdown elt
 
-    std::function<void(std::string)>
-        dropdown_on_click; // this one doesn't use a vector instead it passes in the string of the selected option.
-    std::vector<vertex_geometry::Rectangle> dropdown_option_rects;
-    std::vector<draw_info::IVPSolidColor> dropdown_option_background_ivpsc;
-    std::vector<draw_info::IVPSolidColor> dropdown_option_text_ivpsc;
-    std::vector<std::string> dropdown_options;
-    std::vector<unsigned int> dropdown_doids;
-
+    std::vector<UIDropdownOption> ui_dropdown_options;
     bool mouse_inside = false;
     bool dropdown_open = false;
     TemporalBinarySignal modified_signal;
@@ -104,21 +126,12 @@ struct UIDropdown {
     UIDropdown(std::function<void()> on_click, std::function<void()> on_hover,
                draw_info::IVPSolidColor dropdown_background, draw_info::IVPSolidColor dropdown_text_data,
                glm::vec3 regular_color, glm::vec3 hover_color, vertex_geometry::Rectangle dropdown_rect,
-               std::vector<std::string> dropdown_options, std::function<void(std::string)> dropdown_on_click,
-               std::vector<draw_info::IVPSolidColor> dropdown_option_backgrounds,
-               std::vector<draw_info::IVPSolidColor> dropdown_option_text_data,
-               std::vector<vertex_geometry::Rectangle> dropdown_option_rects, int id = GlobalUIDGenerator::get_id())
+               std::vector<UIDropdownOption> ui_dropdown_options, int id = GlobalUIDGenerator::get_id())
         : on_click(on_click), on_hover(on_hover), dropdown_background(dropdown_background),
           dropdown_text_ivpsc(dropdown_text_data), regular_color(regular_color), hover_color(hover_color),
-          dropdown_rect(dropdown_rect), dropdown_options(dropdown_options), dropdown_on_click(dropdown_on_click),
-          dropdown_option_background_ivpsc(dropdown_option_backgrounds),
-          dropdown_option_text_ivpsc(dropdown_option_text_data), dropdown_option_rects(dropdown_option_rects), id(id) {
-        // TODO we're running under the assumption that every dropdown will have at least one option
-        // NOTE: I didn't think about this but this is probably legacy and can be removed
-        active_selection = dropdown_options.at(0);
-        for (int i = 0; i < dropdown_options.size(); i++) {
-            dropdown_doids.push_back(GlobalUIDGenerator::get_id());
-        }
+          dropdown_rect(dropdown_rect), ui_dropdown_options(ui_dropdown_options), id(id) {
+        // NOTE:  we're running under the assumption that every dropdown will have at least one option
+        active_selection = ui_dropdown_options.at(0).option;
     }
 };
 
@@ -217,7 +230,8 @@ class UI {
     int add_dropdown(std::function<void()> on_click, std::function<void()> on_hover,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
-                     std::function<void(std::string)> dropdown_on_click);
+                     std::function<void(std::string)> option_on_click, std::function<void(std::string)> option_on_hover,
+                     const glm::vec3 &option_color = glm::vec3(0), const glm::vec3 &option_hover_color = glm::vec3(0));
 
     bool remove_clickable_textbox(int do_id);
     bool remove_textbox(int do_id);
@@ -291,15 +305,7 @@ class IUIRenderSuite {
      */
     virtual void render_dropdown(const UIDropdown &dd) = 0;
 
-    /**
-     * @brief Render a dropdown option.
-     * @param dd The UIDropdown containing the dropdown state.
-     * @param ivpsc The solid color data.
-     * @param ivpt The textured data.
-     * @param doid The ID for the dropdown option.
-     */
-    virtual void render_dropdown_option(const UIDropdown &dd, const draw_info::IVPSolidColor &ivpsc,
-                                        const draw_info::IVPSolidColor &text_ivspc, unsigned int doid) = 0;
+    virtual void render_dropdown_option(const UIDropdownOption &udo) = 0;
 };
 
 void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRenderSuite &ui_render_suite,

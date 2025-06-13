@@ -21,6 +21,7 @@ void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
                 std::vector<glm::vec3> cs(cr.ivpsc.xyz_positions.size(), cr.hover_color);
                 cr.ivpsc.rgb_colors = cs;
                 cr.mouse_inside = true;
+                cr.on_hover();
             }
         } else {
             if (cr.mouse_inside) {
@@ -31,9 +32,11 @@ void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
             }
         }
     }
+
     for (auto &dd : dropdowns) {
         if (is_point_in_rectangle(dd.dropdown_rect, mouse_pos_ndc)) {
             if (not dd.mouse_inside) {
+                dd.on_hover();
                 dd.modified_signal.set_on();
                 std::vector<glm::vec3> cs(dd.dropdown_background.xyz_positions.size(), dd.hover_color);
                 dd.dropdown_background.rgb_colors = cs;
@@ -48,6 +51,35 @@ void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
             }
         }
     }
+
+    // because dropdowns and their options are spatially disjoint we can run both the above and below loop just fine
+
+    for (auto &dd : dropdowns) {
+        if (dd.dropdown_open) {
+            for (auto &udo : dd.ui_dropdown_options) {
+
+                auto dropdown_option_rect = udo.rect;
+                auto dropdown_option = udo.option;
+
+                if (is_point_in_rectangle(dropdown_option_rect, mouse_pos_ndc)) {
+                    if (not udo.mouse_inside) {
+                        udo.on_hover(udo.option);
+                        udo.modified_signal.set_on();
+                        std::vector<glm::vec3> cs(udo.background_ivpsc.xyz_positions.size(), udo.hover_color);
+                        udo.background_ivpsc.rgb_colors = cs;
+                        udo.mouse_inside = true;
+                    }
+                } else {
+                    if (udo.mouse_inside) {
+                        udo.modified_signal.set_off();
+                        std::vector<glm::vec3> cs(udo.background_ivpsc.xyz_positions.size(), udo.color);
+                        udo.background_ivpsc.rgb_colors = cs;
+                        udo.mouse_inside = false;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
@@ -55,6 +87,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
     bool already_clicked_a_text_box = false;
     for (auto &cr : clickable_text_boxes) {
         if (not already_clicked_a_text_box and is_point_in_rectangle(cr.rect, mouse_pos_ndc)) {
+            std::cout << "doing a clickable text box on click" << std::endl;
             cr.on_click();
             // we don't want to propagate clicks through to multiple.
             already_clicked_a_text_box = true;
@@ -67,6 +100,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
         if (not ib.focused) {
             if (not already_focused_something and click_inside_box) {
                 std::cout << "clicked in input box" << std::endl;
+
                 std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.focused_color);
                 ib.background_ivpsc.rgb_colors = cs;
 
@@ -107,15 +141,15 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
     // TODO: process dropdown options
     for (auto &dd : dropdowns) {
         if (dd.dropdown_open) {
-            for (int i = 0; i < dd.dropdown_option_rects.size(); i++) {
+            for (auto &udo : dd.ui_dropdown_options) {
 
-                auto dropdown_option_rect = dd.dropdown_option_rects.at(i);
-                auto dropdown_option = dd.dropdown_options.at(i);
+                auto dropdown_option_rect = udo.rect;
+                auto dropdown_option = udo.option;
 
                 bool clicked_inside = is_point_in_rectangle(dropdown_option_rect, mouse_pos_ndc);
 
                 if (clicked_inside) {
-                    dd.dropdown_on_click(dropdown_option);
+                    udo.on_click(dropdown_option);
 
                     dd.active_selection = dropdown_option;
 
@@ -379,7 +413,8 @@ UIRect *UI::get_colored_rectangle(int doid) {
 int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_hover,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
-                     std::function<void(std::string)> option_on_click) {
+                     std::function<void(std::string)> option_on_click, std::function<void(std::string)> option_on_hover,
+                     const glm::vec3 &option_color, const glm::vec3 &option_hover_color) {
 
     // this id is for grabbing an element from the UI object
     int element_id = ui_id_generator.get_id();
@@ -414,7 +449,10 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
     std::vector<draw_info::IVPSolidColor> option_text_data;
     std::vector<draw_info::IVPSolidColor> option_background_rect_data;
     std::vector<vertex_geometry::Rectangle> dropdown_option_rects; // used for mouse click checking
+
+    std::vector<UIDropdownOption> ui_dropdown_options; // used for mouse click checking
     int i = 1;
+
     for (const auto &option : options) {
 
         vertex_geometry::Rectangle option_rect = slide_rectangle(rect, 0, -i);
@@ -433,7 +471,18 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
         auto is = ivs.indices;
         auto vs = ivs.vertices;
 
-        auto dropdown_background_color = regular_color * 0.75f;
+        glm::vec3 dropdown_background_color, dropdown_hover_background_color;
+        if (option_color == glm::vec3(0)) {
+            dropdown_background_color = regular_color * 0.75f;
+        } else {
+            dropdown_background_color = option_color;
+        }
+
+        if (option_hover_color == glm::vec3(0)) {
+            dropdown_hover_background_color = hover_color * 0.75f;
+        } else {
+            dropdown_hover_background_color = option_hover_color;
+        }
 
         std::vector<glm::vec3> cs(vs.size(), dropdown_background_color);
         draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
@@ -447,11 +496,16 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
 
         option_text_data.push_back(text_ivpsc);
 
+        UIDropdownOption udo(option, dropdown_background_color, dropdown_hover_background_color, ivpsc, text_ivpsc,
+                             option_rect, option_on_click, option_on_hover);
+
+        ui_dropdown_options.push_back(udo);
+
         i += 1;
     }
 
-    UIDropdown dropdown(on_click, on_hover, ivpsc, text_ivpsc, regular_color, hover_color, rect, options,
-                        option_on_click, option_background_rect_data, option_text_data, dropdown_option_rects);
+    UIDropdown dropdown(on_click, on_hover, ivpsc, text_ivpsc, regular_color, hover_color, rect, ui_dropdown_options);
+
     dropdowns.emplace_back(dropdown);
     return dropdown.id;
 }
@@ -624,17 +678,10 @@ void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRender
 
     for (auto &dd : curr_ui.get_dropdowns()) {
         ui_render_suite.render_dropdown(dd);
-
-        // render all the dropdown options if the parent dropdown is activated
-        // TODO: needs to work better
         if (dd.dropdown_open) {
-            int num_dropdowns = dd.dropdown_option_rects.size();
-            for (int i = 0; i < num_dropdowns; i++) {
-                draw_info::IVPSolidColor ivpsc = dd.dropdown_option_background_ivpsc[i];
-                draw_info::IVPSolidColor text_ivpsc = dd.dropdown_option_text_ivpsc[i];
-                unsigned int doid = dd.dropdown_doids[i];
-
-                ui_render_suite.render_dropdown_option(dd, ivpsc, text_ivpsc, doid);
+            int num_dropdowns = dd.ui_dropdown_options.size();
+            for (const auto &udo : dd.ui_dropdown_options) {
+                ui_render_suite.render_dropdown_option(udo);
             }
         }
     }
