@@ -14,6 +14,7 @@ bool is_point_in_rectangle(const vertex_geometry::Rectangle &rect, const glm::ve
 }
 
 void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
+
     for (auto &cr : clickable_text_boxes) {
         if (is_point_in_rectangle(cr.rect, mouse_pos_ndc)) {
             if (not cr.mouse_inside) {
@@ -82,23 +83,26 @@ void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
     }
 }
 
-void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
-
-    bool already_clicked_a_text_box = false;
+bool UI::process_mouse_just_clicked_on_clickable_textboxes(const glm::vec2 &mouse_pos_ndc) {
+    bool click_processed = false;
     for (auto &cr : clickable_text_boxes) {
-        if (not already_clicked_a_text_box and is_point_in_rectangle(cr.rect, mouse_pos_ndc)) {
+        if (not click_processed and is_point_in_rectangle(cr.rect, mouse_pos_ndc)) {
             std::cout << "doing a clickable text box on click" << std::endl;
             cr.on_click();
             // we don't want to propagate clicks through to multiple.
-            already_clicked_a_text_box = true;
+            click_processed = true;
         }
     }
 
-    bool already_focused_something = false;
+    return click_processed;
+}
+
+bool UI::process_mouse_just_clicked_on_input_boxes(const glm::vec2 &mouse_pos_ndc) {
+    bool click_processed = false;
     for (auto &ib : input_boxes) {
         bool click_inside_box = is_point_in_rectangle(ib.rect, mouse_pos_ndc);
         if (not ib.focused) {
-            if (not already_focused_something and click_inside_box) {
+            if (not click_processed and click_inside_box) {
                 std::cout << "clicked in input box" << std::endl;
 
                 std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.focused_color);
@@ -112,7 +116,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 ib.text_drawing_ivpsc = text_ivpsc;
                 ib.focused = true;
                 ib.modified_signal.toggle_state();
-                already_focused_something = true;
+                click_processed = true;
             }
         } else {
             if (not click_inside_box) {
@@ -134,10 +138,27 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
             }
         }
     }
+    return click_processed;
+}
 
-    already_focused_something = false;
+void UI::update_dropdown_option(UIDropdown &dropdown, const std::string &option_name) {
+    dropdown.selected_option = option_name;
 
-    bool selected_dropdown_option = false;
+    // NOTE: potentially make function that updates the main dropdown.
+    auto layered_rect = dropdown.dropdown_rect;
+    layered_rect.center.z = text_layer;
+
+    draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(dropdown.selected_option, layered_rect);
+    std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
+    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
+                                        dropdown.dropdown_text_ivpsc.id); // maintining the same id
+
+    dropdown.dropdown_text_ivpsc = text_ivpsc;
+    dropdown.modified_signal.toggle_state();
+}
+
+bool UI::process_mouse_just_clicked_on_dropdown_options(const glm::vec2 &mouse_pos_ndc) {
+    bool click_processed = false;
     // TODO: process dropdown options
     for (auto &dd : dropdowns) {
         if (dd.dropdown_open) {
@@ -151,25 +172,11 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 if (clicked_inside) {
                     udo.on_click(dropdown_option);
 
-                    dd.active_selection = dropdown_option;
-
-                    // NOTE: potentially make function that updates the main dropdown.
-                    auto layered_rect = dd.dropdown_rect;
-                    layered_rect.center.z = text_layer;
-
-                    draw_info::IndexedVertexPositions text_ivp =
-                        grid_font::get_text_geometry(dd.active_selection, layered_rect);
-                    std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-                    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                                        dd.dropdown_text_ivpsc.id); // maintining the same id
-
-                    dd.dropdown_text_ivpsc = text_ivpsc;
-                    dd.modified_signal.toggle_state();
+                    update_dropdown_option(dd, udo.option);
 
                     // we turn off the open dropdown after selecting an option
                     dd.dropdown_open = false;
-
-                    selected_dropdown_option = true;
+                    click_processed = true;
 
                     break;
                 }
@@ -177,16 +184,17 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
         }
     }
 
-    if (selected_dropdown_option) {
-        return;
-    }
+    return click_processed;
+}
 
+bool UI::process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc) {
+    bool click_processed = false;
     for (auto &dd : dropdowns) {
         bool click_inside_box = is_point_in_rectangle(dd.dropdown_rect, mouse_pos_ndc);
 
         if (not dd.dropdown_open) { // if that dropdown is not open, then we can potentially open it
 
-            if (not already_focused_something and click_inside_box) {
+            if (not click_processed and click_inside_box) {
                 std::cout << "clicked in dropdown" << std::endl;
 
                 // change background color to the hovered color even though its a click (works but bad naming)
@@ -199,7 +207,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 layered_rect.center.z = text_layer;
 
                 draw_info::IndexedVertexPositions text_ivp =
-                    grid_font::get_text_geometry(dd.active_selection, layered_rect);
+                    grid_font::get_text_geometry(dd.selected_option, layered_rect);
                 std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
                 draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
                                                     dd.dropdown_text_ivpsc.id); // maintining the same id
@@ -207,7 +215,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
                 dd.dropdown_text_ivpsc = text_ivpsc;
                 dd.dropdown_open = true;
                 dd.modified_signal.toggle_state();
-                already_focused_something = true;
+                click_processed = true;
 
                 break;
             }
@@ -230,6 +238,18 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
             }
         }
     }
+    return click_processed;
+}
+
+void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
+    if (process_mouse_just_clicked_on_clickable_textboxes(mouse_pos_ndc))
+        return;
+    if (process_mouse_just_clicked_on_input_boxes(mouse_pos_ndc))
+        return;
+    if (process_mouse_just_clicked_on_dropdown_options(mouse_pos_ndc))
+        return;
+    if (process_mouse_just_clicked_on_dropdowns(mouse_pos_ndc))
+        return;
 }
 
 void UI::process_key_press(const std::string &character_pressed) {
@@ -410,7 +430,7 @@ UIRect *UI::get_colored_rectangle(int doid) {
     return nullptr;
 }
 
-int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_hover,
+int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_hover, int dropdown_option_idx,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
                      std::function<void(std::string)> option_on_click, std::function<void(std::string)> option_on_hover,
@@ -422,7 +442,7 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
 
-    std::string text = options[0];
+    std::string text = options[dropdown_option_idx];
 
     std::cout << "adding main dropdown with contents: " << text << " and element id " << element_id
               << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
@@ -504,7 +524,8 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
         i += 1;
     }
 
-    UIDropdown dropdown(on_click, on_hover, ivpsc, text_ivpsc, regular_color, hover_color, rect, ui_dropdown_options);
+    UIDropdown dropdown(on_click, on_hover, ivpsc, text_ivpsc, regular_color, hover_color, rect, ui_dropdown_options,
+                        element_id);
 
     dropdowns.emplace_back(dropdown);
     return dropdown.id;

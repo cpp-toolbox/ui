@@ -104,7 +104,7 @@ struct UIDropdownOption {
 struct UIDropdown {
     int id;
 
-    std::string active_selection;
+    std::string selected_option;
 
     glm::vec3 regular_color;
     glm::vec3 hover_color;
@@ -131,7 +131,7 @@ struct UIDropdown {
           dropdown_text_ivpsc(dropdown_text_data), regular_color(regular_color), hover_color(hover_color),
           dropdown_rect(dropdown_rect), ui_dropdown_options(ui_dropdown_options), id(id) {
         // NOTE:  we're running under the assumption that every dropdown will have at least one option
-        active_selection = ui_dropdown_options.at(0).option;
+        selected_option = ui_dropdown_options.at(0).option;
     }
 };
 
@@ -177,7 +177,15 @@ class UI {
     UniqueIDGenerator &abs_pos_object_id_generator;
 
     void process_mouse_position(const glm::vec2 &mouse_pos_ndc);
+
     void process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc);
+    bool process_mouse_just_clicked_on_clickable_textboxes(const glm::vec2 &mouse_pos_ndc);
+    bool process_mouse_just_clicked_on_input_boxes(const glm::vec2 &mouse_pos_ndc);
+    bool process_mouse_just_clicked_on_dropdown_options(const glm::vec2 &mouse_pos_ndc);
+    bool process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc);
+
+    void update_dropdown_option(UIDropdown &dropdown, const std::string &option_name);
+
     void process_key_press(const std::string &character_pressed);
     void process_confirm_action();
     void process_delete_action();
@@ -227,7 +235,7 @@ class UI {
                               vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                               const glm::vec3 &hover_color);
 
-    int add_dropdown(std::function<void()> on_click, std::function<void()> on_hover,
+    int add_dropdown(std::function<void()> on_click, std::function<void()> on_hover, int dropdown_option_idx,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
                      std::function<void(std::string)> option_on_click, std::function<void(std::string)> option_on_hover,
