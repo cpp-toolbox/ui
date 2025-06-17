@@ -368,7 +368,29 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     glm::vec3 center(center_x_pos_ndc, center_y_pos_ndc, text_layer);
     vertex_geometry::Rectangle bounding_rect(center, width, height);
 
-    draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(text, bounding_rect);
+    // NOTE: here we have special logic for if a string contains newlines
+    draw_info::IndexedVertexPositions text_ivp;
+    bool contains_newline = text.find('\n') != std::string::npos;
+    if (contains_newline) {
+        size_t newline_count = std::count(text.begin(), text.end(), '\n');
+        vertex_geometry::Grid text_lines_grid(newline_count + 1, 1, bounding_rect);
+
+        std::istringstream stream(text);
+        std::string line;
+
+        std::vector<draw_info::IndexedVertexPositions> line_ivps;
+        int count = 0;
+        while (std::getline(stream, line)) {
+            auto line_rect = text_lines_grid.get_at(0, count);
+            line_ivps.push_back(grid_font::get_text_geometry(line, line_rect));
+            count++;
+        }
+
+        text_ivp = vertex_geometry::merge_ivps(line_ivps);
+
+    } else {
+        text_ivp = grid_font::get_text_geometry(text, bounding_rect);
+    }
 
     std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
     draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs, text_data_id);
