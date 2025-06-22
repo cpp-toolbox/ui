@@ -245,11 +245,11 @@ class UI {
     bool remove_textbox(int do_id);
     UIClickableTextBox *get_clickable_textbox(int do_id);
 
-    void add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
+    void add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
                        const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color);
 
-    void add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
+    void add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
                        float x_pos_ndc, float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color);
 

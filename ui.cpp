@@ -97,6 +97,23 @@ bool UI::process_mouse_just_clicked_on_clickable_textboxes(const glm::vec2 &mous
     return click_processed;
 }
 
+void unfocus_input_box(UIInputBox &ib) {
+    std::cout << "clicked out of input box" << std::endl;
+    ib.focused = false;
+    std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.regular_color);
+    if (ib.contents.size() == 0) { // put back placeholder
+
+        draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(ib.placeholder_text, ib.rect);
+        std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
+        draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
+                                            ib.text_drawing_ivpsc.id); // maintining the same id
+
+        ib.text_drawing_ivpsc = text_ivpsc;
+    }
+    ib.modified_signal.toggle_state();
+    ib.background_ivpsc.rgb_colors = cs;
+}
+
 bool UI::process_mouse_just_clicked_on_input_boxes(const glm::vec2 &mouse_pos_ndc) {
     bool click_processed = false;
     for (auto &ib : input_boxes) {
@@ -120,21 +137,8 @@ bool UI::process_mouse_just_clicked_on_input_boxes(const glm::vec2 &mouse_pos_nd
             }
         } else {
             if (not click_inside_box) {
-                std::cout << "clicked out of input box" << std::endl;
-                ib.focused = false;
-                std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.regular_color);
-                if (ib.contents.size() == 0) { // put back placeholder
-
-                    draw_info::IndexedVertexPositions text_ivp =
-                        grid_font::get_text_geometry(ib.placeholder_text, ib.rect);
-                    std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-                    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                                        ib.text_drawing_ivpsc.id); // maintining the same id
-
-                    ib.text_drawing_ivpsc = text_ivpsc;
-                }
-                ib.modified_signal.toggle_state();
-                ib.background_ivpsc.rgb_colors = cs;
+                unfocus_input_box(ib);
+                ib.on_confirm(ib.contents);
             }
         }
     }
@@ -639,14 +643,14 @@ int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void
     return clickable_text_box.id;
 };
 
-void UI::add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
+void UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
                        const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color) {
     return this->add_input_box(on_confirm, placeholder_text, ndc_rect.center.x, ndc_rect.center.y, ndc_rect.width,
                                ndc_rect.height, regular_color, focused_color);
 }
 
-void UI::add_input_box(std::function<void(std::string)> &on_confirm, const std::string &placeholder_text,
+void UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
                        float x_pos_ndc, float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
                        const glm::vec3 &focused_color) {
 
