@@ -405,6 +405,18 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     return element_id;
 };
 
+void UI::hide_textbox(int doid) {
+    // Find the textbox with the given ID
+    UITextBox *textbox = get_textbox(doid);
+    textbox->hidden = true;
+}
+
+void UI::unhide_textbox(int doid) {
+    // Find the textbox with the given ID
+    UITextBox *textbox = get_textbox(doid);
+    textbox->hidden = false;
+}
+
 void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
     // Find the textbox with the given ID
     UITextBox *textbox = get_textbox(doid);
@@ -712,7 +724,8 @@ void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRender
     }
 
     for (auto &tb : curr_ui.get_text_boxes()) {
-        ui_render_suite.render_text_box(tb);
+        if (not tb.hidden)
+            ui_render_suite.render_text_box(tb);
     }
 
     for (auto &cr : curr_ui.get_clickable_text_boxes()) {

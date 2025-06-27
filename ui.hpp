@@ -38,6 +38,8 @@ struct UIRect {
     bool mouse_above = false;
     TemporalBinarySignal modified_signal;
 
+    bool hidden = false;
+
     UIRect(draw_info::IVPSolidColor ivpsc, int id = GlobalUIDGenerator::get_id()) : parent_ui_id(id), ivpsc(ivpsc) {}
 };
 
@@ -48,6 +50,8 @@ struct UITextBox {
     vertex_geometry::Rectangle bounding_rect;
     bool mouse_above = false;
     TemporalBinarySignal modified_signal;
+
+    bool hidden = false;
 
     UITextBox(draw_info::IVPSolidColor background_ivpsc, draw_info::IVPSolidColor text_drawing_data,
               vertex_geometry::Rectangle bounding_rect, int id = GlobalUIDGenerator::get_id())
@@ -204,6 +208,8 @@ class UI {
     int add_textbox(const std::string &text, float center_x_pos_ndc, float center_y_pos_ndc, float width, float height,
                     const glm::vec3 &normalized_rgb);
 
+    void hide_textbox(int doid);
+    void unhide_textbox(int doid);
     void modify_text_of_a_textbox(int doid, std::string new_text);
     void modify_colored_rectangle(int doid, vertex_geometry::Rectangle ndc_rectangle);
 
