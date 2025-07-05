@@ -87,7 +87,6 @@ bool UI::process_mouse_just_clicked_on_clickable_textboxes(const glm::vec2 &mous
     bool click_processed = false;
     for (auto &cr : clickable_text_boxes) {
         if (not click_processed and is_point_in_rectangle(cr.rect, mouse_pos_ndc)) {
-            std::cout << "doing a clickable text box on click" << std::endl;
             cr.on_click();
             // we don't want to propagate clicks through to multiple.
             click_processed = true;
@@ -98,7 +97,6 @@ bool UI::process_mouse_just_clicked_on_clickable_textboxes(const glm::vec2 &mous
 }
 
 void unfocus_input_box(UIInputBox &ib) {
-    std::cout << "clicked out of input box" << std::endl;
     ib.focused = false;
     std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.regular_color);
     if (ib.contents.size() == 0) { // put back placeholder
@@ -120,7 +118,6 @@ bool UI::process_mouse_just_clicked_on_input_boxes(const glm::vec2 &mouse_pos_nd
         bool click_inside_box = is_point_in_rectangle(ib.rect, mouse_pos_ndc);
         if (not ib.focused) {
             if (not click_processed and click_inside_box) {
-                std::cout << "clicked in input box" << std::endl;
 
                 std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.focused_color);
                 ib.background_ivpsc.rgb_colors = cs;
@@ -199,7 +196,6 @@ bool UI::process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc)
         if (not dd.dropdown_open) { // if that dropdown is not open, then we can potentially open it
 
             if (not click_processed and click_inside_box) {
-                std::cout << "clicked in dropdown" << std::endl;
 
                 // change background color to the hovered color even though its a click (works but bad naming)
                 std::vector<glm::vec3> cs(dd.dropdown_background.xyz_positions.size(), dd.hover_color);
@@ -227,7 +223,6 @@ bool UI::process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc)
                  // either way the dropdown becomes closed I think that makes sense
 
             if (not click_inside_box) {
-                std::cout << "clicked out of input box" << std::endl;
                 dd.dropdown_open = false;
 
                 /*std::vector<glm::vec3> cs(dd.background_ivpsc.xyz_positions.size(), dd.regular_color);*/
@@ -259,9 +254,7 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
 void UI::process_key_press(const std::string &character_pressed) {
     for (auto &input_box : input_boxes) {
         if (input_box.focused) {
-            std::cout << "got here" << std::endl;
             input_box.contents += character_pressed;
-            std::cout << input_box.contents << std::endl;
 
             draw_info::IndexedVertexPositions text_ivp =
                 grid_font::get_text_geometry(input_box.contents, input_box.rect);
@@ -331,7 +324,7 @@ void UI::add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, fl
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     int rect_id = abs_pos_object_id_generator.get_id();
 
-    std::cout << "adding colored rectangle with element id: " << element_id << "rect_id: " << rect_id << std::endl;
+    logger.info("adding colored rectangle with element id: {} rect_id: {}", element_id, rect_id);
 
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
     draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
@@ -353,8 +346,8 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
 
-    std::cout << "adding textbox with contents: " << text << " and element id " << element_id << "rect_id: " << rect_id
-              << " text_data_id: " << text_data_id << std::endl;
+    logger.info("adding textbox with contents: {} element id: {} rect_id: {} text_data_id: {}", text, element_id,
+                rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices_with_z(center_x_pos_ndc, center_y_pos_ndc, background_layer,
@@ -482,8 +475,8 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
 
     std::string text = options[dropdown_option_idx];
 
-    std::cout << "adding main dropdown with contents: " << text << " and element id " << element_id
-              << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
+    logger.info("adding main dropdown with contents: {} element id: {} rect id: {} text_data_id: {}", text, element_id,
+                rect_id, text_data_id);
 
     vertex_geometry::Rectangle layered_rect = rect;
     layered_rect.center.z = background_layer;
@@ -522,8 +515,8 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
         int rect_id = abs_pos_object_id_generator.get_id();
         int text_data_id = abs_pos_object_id_generator.get_id();
 
-        std::cout << "adding dropdown option with contents: " << option << "rect_id: " << rect_id
-                  << " text_data_id: " << text_data_id << std::endl;
+        logger.info("adding dropdown option with contents: {} rect_id: {} text_data_id: {}", option, rect_id,
+                    text_data_id);
 
         auto ivs = option_rect.get_ivs();
         auto is = ivs.indices;
@@ -634,8 +627,8 @@ int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
 
-    std::cout << "adding clickable textbox with text: " << text << " and element id: " << element_id
-              << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
+    logger.info("adding clickable textbox with text: {} element id: {} rect id: {} text data id: {}", text, element_id,
+                rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs =
@@ -672,8 +665,8 @@ void UI::add_input_box(std::function<void(std::string)> on_confirm, const std::s
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
 
-    std::cout << "adding input box with placeholder text: " << placeholder_text << " and element id: " << element_id
-              << "rect_id: " << rect_id << " text_data_id: " << text_data_id << std::endl;
+    logger.info("adding input box with placeholder text: {} element id: {}, rect id: {} text data id: {}",
+                placeholder_text, element_id, rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs =
