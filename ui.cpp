@@ -444,7 +444,7 @@ void UI::modify_colored_rectangle(int doid, vertex_geometry::Rectangle ndc_recta
         // Modify the text mesh with the new text
 
         // indices don't have to change
-        colored_rectangle->ivpsc.xyz_positions = ndc_rectangle.get_ivs().vertices;
+        colored_rectangle->ivpsc.xyz_positions = ndc_rectangle.get_ivs().xyz_positions;
         colored_rectangle->modified_signal.toggle_state();
     }
 }
@@ -491,7 +491,7 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
     // main dropdown button
     auto ivs = layered_rect.get_ivs();
     auto is = ivs.indices;
-    auto vs = ivs.vertices;
+    auto vs = ivs.xyz_positions;
 
     std::vector<glm::vec3> cs(vs.size(), regular_color);
     draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
@@ -527,7 +527,7 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
 
         auto ivs = option_rect.get_ivs();
         auto is = ivs.indices;
-        auto vs = ivs.vertices;
+        auto vs = ivs.xyz_positions;
 
         glm::vec3 dropdown_background_color, dropdown_hover_background_color;
         if (option_color == glm::vec3(0)) {
