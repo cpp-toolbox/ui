@@ -190,6 +190,12 @@ class UI {
     bool process_mouse_just_clicked_on_dropdown_options(const glm::vec2 &mouse_pos_ndc);
     bool process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc);
 
+    void unfocus_input_box(UIInputBox &ib);
+    void unfocus_input_box(int input_box_eid);
+
+    void focus_input_box(UIInputBox &ib);
+    void focus_input_box(int input_box_eid);
+
     void update_dropdown_option(UIDropdown &dropdown, const std::string &option_name);
 
     void process_key_press(const std::string &character_pressed);
@@ -216,6 +222,7 @@ class UI {
     void modify_colored_rectangle(int doid, vertex_geometry::Rectangle ndc_rectangle);
 
     UITextBox *get_textbox(int doid);
+    UIInputBox *get_inputbox(int doid);
     UIRect *get_colored_rectangle(int doid);
 
     /* why we pass our fucntions by reference:
@@ -253,13 +260,13 @@ class UI {
     bool remove_textbox(int do_id);
     UIClickableTextBox *get_clickable_textbox(int do_id);
 
-    void add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
-                       const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
-                       const glm::vec3 &focused_color);
+    int add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
+                      const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
+                      const glm::vec3 &focused_color);
 
-    void add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
-                       float x_pos_ndc, float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
-                       const glm::vec3 &focused_color);
+    int add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text, float x_pos_ndc,
+                      float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
+                      const glm::vec3 &focused_color);
 
     /*const std::vector<UIRect> &get_rectangles() const;*/
     /*const std::vector<UIClickableTextBox> &get_clickable_text_boxes() const;*/

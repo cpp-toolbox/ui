@@ -96,7 +96,7 @@ bool UI::process_mouse_just_clicked_on_clickable_textboxes(const glm::vec2 &mous
     return click_processed;
 }
 
-void unfocus_input_box(UIInputBox &ib) {
+void UI::unfocus_input_box(UIInputBox &ib) {
     ib.focused = false;
     std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.regular_color);
     if (ib.contents.size() == 0) { // put back placeholder
@@ -112,24 +112,31 @@ void unfocus_input_box(UIInputBox &ib) {
     ib.background_ivpsc.rgb_colors = cs;
 }
 
+void UI::unfocus_input_box(int input_box_eid) { unfocus_input_box(*get_inputbox(input_box_eid)); }
+
+void UI::focus_input_box(UIInputBox &ib) {
+    std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.focused_color);
+    ib.background_ivpsc.rgb_colors = cs;
+
+    draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(ib.contents, ib.rect);
+    std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
+    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
+                                        ib.text_drawing_ivpsc.id); // maintining the same id
+
+    ib.text_drawing_ivpsc = text_ivpsc;
+    ib.focused = true;
+    ib.modified_signal.toggle_state();
+}
+
+void UI::focus_input_box(int input_box_eid) { focus_input_box(*get_inputbox(input_box_eid)); }
+
 bool UI::process_mouse_just_clicked_on_input_boxes(const glm::vec2 &mouse_pos_ndc) {
     bool click_processed = false;
     for (auto &ib : input_boxes) {
         bool click_inside_box = is_point_in_rectangle(ib.rect, mouse_pos_ndc);
         if (not ib.focused) {
             if (not click_processed and click_inside_box) {
-
-                std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.focused_color);
-                ib.background_ivpsc.rgb_colors = cs;
-
-                draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(ib.contents, ib.rect);
-                std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-                draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                                    ib.text_drawing_ivpsc.id); // maintining the same id
-
-                ib.text_drawing_ivpsc = text_ivpsc;
-                ib.focused = true;
-                ib.modified_signal.toggle_state();
+                focus_input_box(ib);
                 click_processed = true;
             }
         } else {
@@ -452,6 +459,16 @@ UITextBox *UI::get_textbox(int doid) {
     return nullptr;
 }
 
+UIInputBox *UI::get_inputbox(int doid) {
+    auto it =
+        std::find_if(input_boxes.begin(), input_boxes.end(), [doid](const UIInputBox &obj) { return obj.id == doid; });
+
+    if (it != input_boxes.end()) {
+        return &(*it);
+    }
+    return nullptr;
+}
+
 UIRect *UI::get_colored_rectangle(int doid) {
     auto it = std::find_if(rectangles.begin(), rectangles.end(),
                            [doid](const UIRect &obj) { return obj.parent_ui_id == doid; });
@@ -648,16 +665,16 @@ int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void
     return clickable_text_box.id;
 };
 
-void UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
-                       const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
-                       const glm::vec3 &focused_color) {
+int UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
+                      const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
+                      const glm::vec3 &focused_color) {
     return this->add_input_box(on_confirm, placeholder_text, ndc_rect.center.x, ndc_rect.center.y, ndc_rect.width,
                                ndc_rect.height, regular_color, focused_color);
 }
 
-void UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
-                       float x_pos_ndc, float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
-                       const glm::vec3 &focused_color) {
+int UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text, float x_pos_ndc,
+                      float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
+                      const glm::vec3 &focused_color) {
 
     // this id is for grabbing an element from the UI object
     int element_id = ui_id_generator.get_id();
@@ -682,6 +699,8 @@ void UI::add_input_box(std::function<void(std::string)> on_confirm, const std::s
 
     input_boxes.emplace_back(on_confirm, ivpsc, text_ivpsc, placeholder_text, "", regular_color, focused_color, rect,
                              element_id);
+
+    return element_id;
 };
 
 const std::vector<UIClickableTextBox> &UI::get_clickable_text_boxes() const { return clickable_text_boxes; }
