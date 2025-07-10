@@ -103,8 +103,8 @@ void unfocus_input_box(UIInputBox &ib) {
 
         draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(ib.placeholder_text, ib.rect);
         std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-        draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                            ib.text_drawing_ivpsc.id); // maintining the same id
+        draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
+                                       ib.text_drawing_ivpsc.id); // maintining the same id
 
         ib.text_drawing_ivpsc = text_ivpsc;
     }
@@ -124,8 +124,8 @@ bool UI::process_mouse_just_clicked_on_input_boxes(const glm::vec2 &mouse_pos_nd
 
                 draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(ib.contents, ib.rect);
                 std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-                draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                                    ib.text_drawing_ivpsc.id); // maintining the same id
+                draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
+                                               ib.text_drawing_ivpsc.id); // maintining the same id
 
                 ib.text_drawing_ivpsc = text_ivpsc;
                 ib.focused = true;
@@ -151,8 +151,8 @@ void UI::update_dropdown_option(UIDropdown &dropdown, const std::string &option_
 
     draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(dropdown.selected_option, layered_rect);
     std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                        dropdown.dropdown_text_ivpsc.id); // maintining the same id
+    draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
+                                   dropdown.dropdown_text_ivpsc.id); // maintining the same id
 
     dropdown.dropdown_text_ivpsc = text_ivpsc;
     dropdown.modified_signal.toggle_state();
@@ -209,8 +209,8 @@ bool UI::process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc)
                 draw_info::IndexedVertexPositions text_ivp =
                     grid_font::get_text_geometry(dd.selected_option, layered_rect);
                 std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-                draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                                    dd.dropdown_text_ivpsc.id); // maintining the same id
+                draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
+                                               dd.dropdown_text_ivpsc.id); // maintining the same id
 
                 dd.dropdown_text_ivpsc = text_ivpsc;
                 dd.dropdown_open = true;
@@ -259,8 +259,8 @@ void UI::process_key_press(const std::string &character_pressed) {
             draw_info::IndexedVertexPositions text_ivp =
                 grid_font::get_text_geometry(input_box.contents, input_box.rect);
             std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-            draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                                input_box.text_drawing_ivpsc.id); // maintining the same id
+            draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
+                                           input_box.text_drawing_ivpsc.id); // maintining the same id
 
             input_box.text_drawing_ivpsc = text_ivpsc;
             input_box.modified_signal.toggle_state();
@@ -277,8 +277,7 @@ void UI::process_confirm_action() {
             // after hitting enter go back to regular non focused mode.
             input_box.focused = false;
             std::vector<glm::vec3> cs(input_box.background_ivpsc.xyz_positions.size(), input_box.regular_color);
-            draw_info::IVPSolidColor ivpsc(input_box.background_ivpsc.indices, input_box.background_ivpsc.xyz_positions,
-                                           cs);
+            draw_info::IVPColor ivpsc(input_box.background_ivpsc.indices, input_box.background_ivpsc.xyz_positions, cs);
             input_box.background_ivpsc = ivpsc;
             input_box.modified_signal.toggle_state();
 
@@ -300,8 +299,8 @@ void UI::process_delete_action() {
 
             draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(text_to_use, input_box.rect);
             std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-            draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs,
-                                                input_box.text_drawing_ivpsc.id); // maintining the same id
+            draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
+                                           input_box.text_drawing_ivpsc.id); // maintining the same id
 
             input_box.text_drawing_ivpsc = text_ivpsc;
             input_box.modified_signal.toggle_state();
@@ -327,7 +326,7 @@ void UI::add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, fl
     logger.info("adding colored rectangle with element id: {} rect_id: {}", element_id, rect_id);
 
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
-    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
+    draw_info::IVPColor ivpsc(is, vs, cs, rect_id);
     rectangles.emplace_back(ivpsc, element_id);
 }
 
@@ -353,7 +352,7 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     auto vs = vertex_geometry::generate_rectangle_vertices_with_z(center_x_pos_ndc, center_y_pos_ndc, background_layer,
                                                                   width, height);
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
-    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
+    draw_info::IVPColor ivpsc(is, vs, cs, rect_id);
 
     // TODO: do we really need this, we're already storing this in two places! that's why the below line is commented
     // the problem is that in the renderer we will iterate over the rectangles and  textboxes elements the problem is
@@ -390,7 +389,7 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     }
 
     std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs, text_data_id);
+    draw_info::IVPColor text_ivpsc(text_ivp, text_cs, text_data_id);
 
     UITextBox tb(ivpsc, text_ivpsc, bounding_rect, element_id); // used here
     text_boxes.emplace_back(tb);
@@ -424,7 +423,7 @@ void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
 
         std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
 
-        textbox->text_drawing_ivpsc = draw_info::IVPSolidColor(text_ivp, text_cs, textbox->text_drawing_ivpsc.id);
+        textbox->text_drawing_ivpsc = draw_info::IVPColor(text_ivp, text_cs, textbox->text_drawing_ivpsc.id);
         textbox->modified_signal.toggle_state();
     }
 }
@@ -487,18 +486,18 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
     auto vs = ivs.xyz_positions;
 
     std::vector<glm::vec3> cs(vs.size(), regular_color);
-    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
+    draw_info::IVPColor ivpsc(is, vs, cs, rect_id);
 
     vertex_geometry::Rectangle text_rect = rect;
     text_rect.center.z = text_layer;
 
     draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(text, text_rect);
     std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs, text_data_id);
+    draw_info::IVPColor text_ivpsc(text_ivp, text_cs, text_data_id);
 
     // now the dropdown buttons themselves
-    std::vector<draw_info::IVPSolidColor> option_text_data;
-    std::vector<draw_info::IVPSolidColor> option_background_rect_data;
+    std::vector<draw_info::IVPColor> option_text_data;
+    std::vector<draw_info::IVPColor> option_background_rect_data;
     std::vector<vertex_geometry::Rectangle> dropdown_option_rects; // used for mouse click checking
 
     std::vector<UIDropdownOption> ui_dropdown_options; // used for mouse click checking
@@ -536,14 +535,14 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
         }
 
         std::vector<glm::vec3> cs(vs.size(), dropdown_background_color);
-        draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
+        draw_info::IVPColor ivpsc(is, vs, cs, rect_id);
         option_background_rect_data.push_back(ivpsc);
 
         option_rect.center.z = dropdown_text_layer;
 
         draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(option, option_rect);
         std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-        draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs, text_data_id);
+        draw_info::IVPColor text_ivpsc(text_ivp, text_cs, text_data_id);
 
         option_text_data.push_back(text_ivpsc);
 
@@ -635,12 +634,12 @@ int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void
         vertex_geometry::generate_rectangle_vertices_with_z(x_pos_ndc, y_pos_ndc, background_layer, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
 
-    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
+    draw_info::IVPColor ivpsc(is, vs, cs, rect_id);
     vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, text_layer), width, height);
 
     draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(text, rect);
     std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs, text_data_id);
+    draw_info::IVPColor text_ivpsc(text_ivp, text_cs, text_data_id);
 
     UIClickableTextBox clickable_text_box(on_click, on_hover, ivpsc, text_ivpsc, regular_color, hover_color, rect,
                                           element_id);
@@ -673,12 +672,12 @@ void UI::add_input_box(std::function<void(std::string)> on_confirm, const std::s
         vertex_geometry::generate_rectangle_vertices_with_z(x_pos_ndc, y_pos_ndc, background_layer, width, height);
     std::vector<glm::vec3> cs(vs.size(), regular_color);
 
-    draw_info::IVPSolidColor ivpsc(is, vs, cs, rect_id);
+    draw_info::IVPColor ivpsc(is, vs, cs, rect_id);
     vertex_geometry::Rectangle rect(glm::vec3(x_pos_ndc, y_pos_ndc, text_layer), width, height);
 
     draw_info::IndexedVertexPositions text_ivp = grid_font::get_text_geometry(placeholder_text, rect);
     std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
-    draw_info::IVPSolidColor text_ivpsc(text_ivp, text_cs, text_data_id);
+    draw_info::IVPColor text_ivpsc(text_ivp, text_cs, text_data_id);
 
     input_boxes.emplace_back(on_confirm, ivpsc, text_ivpsc, placeholder_text, "", regular_color, focused_color, rect,
                              element_id);
