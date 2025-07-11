@@ -246,11 +246,11 @@ bool UI::process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc)
 }
 
 void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
+    if (process_mouse_just_clicked_on_dropdown_options(mouse_pos_ndc))
+        return;
     if (process_mouse_just_clicked_on_clickable_textboxes(mouse_pos_ndc))
         return;
     if (process_mouse_just_clicked_on_input_boxes(mouse_pos_ndc))
-        return;
-    if (process_mouse_just_clicked_on_dropdown_options(mouse_pos_ndc))
         return;
     if (process_mouse_just_clicked_on_dropdowns(mouse_pos_ndc))
         return;
