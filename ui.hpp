@@ -172,7 +172,7 @@ class UI {
           dropdown_background_layer(z_layer - 0.03), dropdown_text_layer(z_layer - 0.04),
           abs_pos_object_id_generator(abs_pos_object_id_generator) {};
 
-    ConsoleLogger logger{"ui"};
+    Logger logger{"ui"};
 
     float z_layer, background_layer, text_layer, dropdown_background_layer, dropdown_text_layer;
 
