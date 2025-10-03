@@ -249,6 +249,39 @@ class UI {
                               vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                               const glm::vec3 &hover_color);
 
+    /**
+     * @brief Adds a dropdown UI element with a main button and multiple selectable options.
+     *
+     * This function creates a dropdown menu consisting of a main button (displaying one of the given options)
+     * and a list of selectable dropdown options. Each element in the dropdown (main button and options) is
+     * represented as rectangles with text overlays, and is assigned unique internal IDs for rendering and event handling.
+     *
+     * @param on_click Callback triggered when the main dropdown button is clicked.
+     * @param on_hover Callback triggered when the main dropdown button is hovered over.
+     * @param dropdown_option_idx Index of the option in @p options to display as the initially selected option.
+     * @param rect The rectangle defining the size and position of the dropdown button.
+     * @param regular_color The background color of the main dropdown button in its normal state.
+     * @param hover_color The background color of the main dropdown button when hovered over.
+     * @param options A list of strings representing the dropdown options to display.
+     * @param option_on_click Callback triggered when a dropdown option is clicked. Receives the option string as input.
+     * @param option_on_hover Callback triggered when a dropdown option is hovered over. Receives the option string as input.
+     * @param option_color The background color of dropdown options in their normal state. 
+     *                     If (0,0,0), a default darker variant of @p regular_color is used.
+     * @param option_hover_color The background color of dropdown options when hovered. 
+     *                           If (0,0,0), a default darker variant of @p hover_color is used.
+     *
+     * @return int A unique ID representing the created dropdown element. This ID can be used to reference
+     *             or remove the dropdown from the UI system later.
+     *
+     * @note
+     * - Each dropdown option is positioned below the main button by sliding the rectangle downward.
+     * - Colors default to dimmed versions of the main button colors if option-specific colors are not provided.
+     * - All internal geometry is generated and registered with unique IDs for rendering and event management.
+     *
+     * @bug @p options must not be empty or else it crashes, also @p dropdown_option_idx must be a valid index of @p options
+     *
+     * @see UIDropdown, UIDropdownOption
+     */
     int add_dropdown(std::function<void()> on_click, std::function<void()> on_hover, int dropdown_option_idx,
                      const vertex_geometry::Rectangle &rect, const glm::vec3 &regular_color,
                      const glm::vec3 &hover_color, const std::vector<std::string> &options,
