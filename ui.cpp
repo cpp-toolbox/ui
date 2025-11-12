@@ -98,6 +98,7 @@ bool UI::process_mouse_just_clicked_on_clickable_textboxes(const glm::vec2 &mous
 
 void UI::unfocus_input_box(UIInputBox &ib) {
     ib.focused = false;
+    ib.already_ignored_initial_character_during_active_focus = false;
     std::vector<glm::vec3> cs(ib.background_ivpsc.xyz_positions.size(), ib.regular_color);
     if (ib.contents.size() == 0) { // put back placeholder
 
@@ -261,6 +262,13 @@ void UI::process_mouse_just_clicked(const glm::vec2 &mouse_pos_ndc) {
 void UI::process_key_press(const std::string &character_pressed) {
     for (auto &input_box : input_boxes) {
         if (input_box.focused) {
+            // We only want to do this once though.
+            if (not input_box.already_ignored_initial_character_during_active_focus) {
+                if (input_box.initial_ignore_character == character_pressed) {
+                    input_box.already_ignored_initial_character_during_active_focus = true;
+                    continue;
+                }
+            }
             input_box.contents += character_pressed;
 
             draw_info::IndexedVertexPositions text_ivp =
@@ -283,6 +291,7 @@ void UI::process_confirm_action() {
 
             // after hitting enter go back to regular non focused mode.
             input_box.focused = false;
+            input_box.already_ignored_initial_character_during_active_focus = false;
             std::vector<glm::vec3> cs(input_box.background_ivpsc.xyz_positions.size(), input_box.regular_color);
             draw_info::IVPColor ivpsc(input_box.background_ivpsc.indices, input_box.background_ivpsc.xyz_positions, cs);
             input_box.background_ivpsc = ivpsc;
@@ -317,8 +326,22 @@ void UI::process_delete_action() {
 }
 
 void UI::add_colored_rectangle(vertex_geometry::Rectangle ndc_rectangle, const glm::vec3 &normalized_rgb) {
-    this->add_colored_rectangle(ndc_rectangle.center.x, ndc_rectangle.center.y, ndc_rectangle.width,
-                                ndc_rectangle.height, normalized_rgb);
+
+    int element_id = ui_id_generator.get_id();
+
+    // NOTE: I don't think we need to do this because now the batcher checks to see if something has an id and if it
+    // doesn't it automatically gets one
+    int rect_id = abs_pos_object_id_generator.get_id();
+
+    auto ivp = ndc_rectangle.get_ivs();
+    draw_info::IVPColor ivpc(ivp, normalized_rgb);
+    ivpc.id = rect_id;
+
+    global_logger.info("adding colored rectangle with element id: {} rect_id: {}", element_id, rect_id);
+
+    rectangles.emplace_back(ivpc, element_id);
+
+    // TODO: should this not reutrn the element id too?
 }
 
 void UI::add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, float height,
@@ -330,7 +353,7 @@ void UI::add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, fl
     auto vs = vertex_geometry::generate_rectangle_vertices(x_pos_ndc, y_pos_ndc, width, height);
     int rect_id = abs_pos_object_id_generator.get_id();
 
-    logger.info("adding colored rectangle with element id: {} rect_id: {}", element_id, rect_id);
+    global_logger.info("adding colored rectangle with element id: {} rect_id: {}", element_id, rect_id);
 
     std::vector<glm::vec3> cs(vs.size(), normalized_rgb);
     draw_info::IVPColor ivpsc(is, vs, cs, rect_id);
@@ -352,8 +375,8 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
 
-    logger.info("adding textbox with contents: {} element id: {} rect_id: {} text_data_id: {}", text, element_id,
-                rect_id, text_data_id);
+    global_logger.info("adding textbox with contents: {} element id: {} rect_id: {} text_data_id: {}", text, element_id,
+                       rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices_with_z(center_x_pos_ndc, center_y_pos_ndc, background_layer,
@@ -400,6 +423,9 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
 
     UITextBox tb(ivpsc, text_ivpsc, bounding_rect, element_id); // used here
     text_boxes.emplace_back(tb);
+
+    global_logger.info("bg id: {}", tb.background_ivpsc.id);
+    global_logger.info("text id: {}", tb.text_drawing_ivpsc.id);
 
     return element_id;
 };
@@ -491,8 +517,8 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
 
     std::string text = options[dropdown_option_idx];
 
-    logger.info("adding main dropdown with contents: {} element id: {} rect id: {} text_data_id: {}", text, element_id,
-                rect_id, text_data_id);
+    global_logger.info("adding main dropdown with contents: {} element id: {} rect id: {} text_data_id: {}", text,
+                       element_id, rect_id, text_data_id);
 
     vertex_geometry::Rectangle layered_rect = rect;
     layered_rect.center.z = background_layer;
@@ -531,8 +557,8 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
         int rect_id = abs_pos_object_id_generator.get_id();
         int text_data_id = abs_pos_object_id_generator.get_id();
 
-        logger.info("adding dropdown option with contents: {} rect_id: {} text_data_id: {}", option, rect_id,
-                    text_data_id);
+        global_logger.info("adding dropdown option with contents: {} rect_id: {} text_data_id: {}", option, rect_id,
+                           text_data_id);
 
         auto ivs = option_rect.get_ivs();
         auto is = ivs.indices;
@@ -598,6 +624,7 @@ UIClickableTextBox *UI::get_clickable_textbox(int do_id) {
 }
 
 bool UI::remove_clickable_textbox(int do_id) {
+    // TODO: don't we have to reclaim sometrhing here or else memory leak in the batcher class
     auto it = std::find_if(clickable_text_boxes.begin(), clickable_text_boxes.end(),
                            [do_id](const UIClickableTextBox &obj) { return obj.id == do_id; });
 
@@ -609,6 +636,7 @@ bool UI::remove_clickable_textbox(int do_id) {
 }
 
 bool UI::remove_textbox(int do_id) {
+    LogSection _(global_logger, "remove textbox");
 
     ui_id_generator.reclaim_id(do_id);
 
@@ -643,8 +671,8 @@ int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
 
-    logger.info("adding clickable textbox with text: {} element id: {} rect id: {} text data id: {}", text, element_id,
-                rect_id, text_data_id);
+    global_logger.info("adding clickable textbox with text: {} element id: {} rect id: {} text data id: {}", text,
+                       element_id, rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs =
@@ -666,14 +694,14 @@ int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void
 
 int UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
                       const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
-                      const glm::vec3 &focused_color) {
+                      const glm::vec3 &focused_color, std::optional<std::string> initial_ignore_character) {
     return this->add_input_box(on_confirm, placeholder_text, ndc_rect.center.x, ndc_rect.center.y, ndc_rect.width,
-                               ndc_rect.height, regular_color, focused_color);
+                               ndc_rect.height, regular_color, focused_color, initial_ignore_character);
 }
 
 int UI::add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text, float x_pos_ndc,
                       float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
-                      const glm::vec3 &focused_color) {
+                      const glm::vec3 &focused_color, std::optional<std::string> initial_ignore_character) {
 
     // this id is for grabbing an element from the UI object
     int element_id = ui_id_generator.get_id();
@@ -681,8 +709,8 @@ int UI::add_input_box(std::function<void(std::string)> on_confirm, const std::st
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
 
-    logger.info("adding input box with placeholder text: {} element id: {}, rect id: {} text data id: {}",
-                placeholder_text, element_id, rect_id, text_data_id);
+    global_logger.info("adding input box with placeholder text: {} element id: {}, rect id: {} text data id: {}",
+                       placeholder_text, element_id, rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs =
@@ -697,7 +725,7 @@ int UI::add_input_box(std::function<void(std::string)> on_confirm, const std::st
     draw_info::IVPColor text_ivpsc(text_ivp, text_cs, text_data_id);
 
     input_boxes.emplace_back(on_confirm, ivpsc, text_ivpsc, placeholder_text, "", regular_color, focused_color, rect,
-                             element_id);
+                             element_id, initial_ignore_character);
 
     return element_id;
 };

@@ -40,6 +40,7 @@ struct UIRect {
 
     bool hidden = false;
 
+    // TODO: why are we using the global here...
     UIRect(draw_info::IVPColor ivpsc, int id = GlobalUIDGenerator::get_id()) : parent_ui_id(id), ivpsc(ivpsc) {}
 };
 
@@ -150,14 +151,19 @@ struct UIInputBox {
     vertex_geometry::Rectangle rect;
     bool focused = false;
     TemporalBinarySignal modified_signal;
+    /// @note sometimes you have a key which initializes the input box, and you want to ignore that stroke so that you
+    /// don't get an initial character in the box.
+    std::optional<std::string> initial_ignore_character;
+    bool already_ignored_initial_character_during_active_focus = false;
 
     UIInputBox(std::function<void(std::string)> on_confirm, draw_info::IVPColor background_ivpsc,
                draw_info::IVPColor text_drawing_data, std::string placeholder_text, std::string contents,
                glm::vec3 regular_color, glm::vec3 focused_color, vertex_geometry::Rectangle rect,
-               int id = GlobalUIDGenerator::get_id())
+               int id = GlobalUIDGenerator::get_id(),
+               std::optional<std::string> initial_ignore_character = std::nullopt)
         : on_confirm(on_confirm), background_ivpsc(background_ivpsc), text_drawing_ivpsc(text_drawing_data),
           placeholder_text(placeholder_text), contents(contents), regular_color(regular_color),
-          focused_color(focused_color), rect(rect), id(id) {}
+          focused_color(focused_color), rect(rect), id(id), initial_ignore_character(initial_ignore_character) {}
 };
 
 // we work in ndc space, and so z layer refers to what z layer we're on, by default we have 20 z layers of the form
@@ -165,14 +171,15 @@ struct UIInputBox {
 // each UI owns the space from its z layer to the next z layer, so for example if you create a UI with z layer 0, then
 // it owns the space from 0 to 0.1 and thus all the numbers like 0.01, 0.02, 0.03, 0.04, ... 0.09 are all bandwiths you
 // can do stuff on safely and not hit the next z layer.
+//
+// TODO: in the future I think I can remove the abs_pos_object id generator because the batcher can register ids
+// automatically now
 class UI {
   public:
     UI(float z_layer, UniqueIDGenerator &abs_pos_object_id_generator)
         : z_layer(z_layer), background_layer(z_layer - 0.01), text_layer(z_layer - 0.02),
           dropdown_background_layer(z_layer - 0.03), dropdown_text_layer(z_layer - 0.04),
           abs_pos_object_id_generator(abs_pos_object_id_generator) {};
-
-    Logger logger{"ui"};
 
     float z_layer, background_layer, text_layer, dropdown_background_layer, dropdown_text_layer;
 
@@ -201,7 +208,13 @@ class UI {
     void process_confirm_action();
     void process_delete_action();
 
+    /**
+     * @brief adds a colored retangle the ui.
+     *
+     */
     void add_colored_rectangle(vertex_geometry::Rectangle ndc_rectangle, const glm::vec3 &normalized_rgb);
+
+    // WARN: deprecated
     void add_colored_rectangle(float x_pos_ndc, float y_pos_ndc, float width, float height,
                                const glm::vec3 &normalized_rgb);
 
@@ -220,6 +233,7 @@ class UI {
     void modify_text_of_a_textbox(int doid, std::string new_text);
     void modify_colored_rectangle(int doid, vertex_geometry::Rectangle ndc_rectangle);
 
+    // TODO: just return references, I did pointers because I didn't know I could return references I think
     UITextBox *get_textbox(int doid);
     UIInputBox *get_inputbox(int doid);
     UIRect *get_colored_rectangle(int doid);
@@ -254,7 +268,8 @@ class UI {
      *
      * This function creates a dropdown menu consisting of a main button (displaying one of the given options)
      * and a list of selectable dropdown options. Each element in the dropdown (main button and options) is
-     * represented as rectangles with text overlays, and is assigned unique internal IDs for rendering and event handling.
+     * represented as rectangles with text overlays, and is assigned unique internal IDs for rendering and event
+     * handling.
      *
      * @param on_click Callback triggered when the main dropdown button is clicked.
      * @param on_hover Callback triggered when the main dropdown button is hovered over.
@@ -264,10 +279,11 @@ class UI {
      * @param hover_color The background color of the main dropdown button when hovered over.
      * @param options A list of strings representing the dropdown options to display.
      * @param option_on_click Callback triggered when a dropdown option is clicked. Receives the option string as input.
-     * @param option_on_hover Callback triggered when a dropdown option is hovered over. Receives the option string as input.
-     * @param option_color The background color of dropdown options in their normal state. 
+     * @param option_on_hover Callback triggered when a dropdown option is hovered over. Receives the option string as
+     * input.
+     * @param option_color The background color of dropdown options in their normal state.
      *                     If (0,0,0), a default darker variant of @p regular_color is used.
-     * @param option_hover_color The background color of dropdown options when hovered. 
+     * @param option_hover_color The background color of dropdown options when hovered.
      *                           If (0,0,0), a default darker variant of @p hover_color is used.
      *
      * @return int A unique ID representing the created dropdown element. This ID can be used to reference
@@ -278,7 +294,8 @@ class UI {
      * - Colors default to dimmed versions of the main button colors if option-specific colors are not provided.
      * - All internal geometry is generated and registered with unique IDs for rendering and event management.
      *
-     * @bug @p options must not be empty or else it crashes, also @p dropdown_option_idx must be a valid index of @p options
+     * @bug @p options must not be empty or else it crashes, also @p dropdown_option_idx must be a valid index of @p
+     * options
      *
      * @see UIDropdown, UIDropdownOption
      */
@@ -288,17 +305,20 @@ class UI {
                      std::function<void(std::string)> option_on_click, std::function<void(std::string)> option_on_hover,
                      const glm::vec3 &option_color = glm::vec3(0), const glm::vec3 &option_hover_color = glm::vec3(0));
 
+    // TODO: for now I'm not going to trust these remove methods I think.
     bool remove_clickable_textbox(int do_id);
     bool remove_textbox(int do_id);
     UIClickableTextBox *get_clickable_textbox(int do_id);
 
     int add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text,
                       const vertex_geometry::Rectangle &ndc_rect, const glm::vec3 &regular_color,
-                      const glm::vec3 &focused_color);
+                      const glm::vec3 &focused_color,
+                      std::optional<std::string> initial_ignore_character = std::nullopt);
 
     int add_input_box(std::function<void(std::string)> on_confirm, const std::string &placeholder_text, float x_pos_ndc,
                       float y_pos_ndc, float width, float height, const glm::vec3 &regular_color,
-                      const glm::vec3 &focused_color);
+                      const glm::vec3 &focused_color,
+                      std::optional<std::string> initial_ignore_character = std::nullopt);
 
     /*const std::vector<UIRect> &get_rectangles() const;*/
     /*const std::vector<UIClickableTextBox> &get_clickable_text_boxes() const;*/
@@ -315,6 +335,7 @@ class UI {
 
     std::vector<draw_info::IVPTextured> drawable_text_information;
 
+    // NOTE: these are used for checking mouse clicks
     std::vector<UIRect> rectangles;
     std::vector<UIDropdown> dropdowns;
     std::vector<UIClickableTextBox> clickable_text_boxes;
@@ -363,6 +384,11 @@ class IUIRenderSuite {
     virtual void render_dropdown_option(const UIDropdownOption &udo) = 0;
 };
 
+/**
+ * @brief the function that actually renders the ui
+ *
+ *
+ */
 void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRenderSuite &ui_render_suite,
                                  const std::vector<std::string> &key_strings_just_pressed,
                                  bool delete_action_just_pressed, bool confirm_action_just_pressed,
