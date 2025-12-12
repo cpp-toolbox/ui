@@ -18,17 +18,17 @@ void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
     for (auto &cr : clickable_text_boxes) {
         if (is_point_in_rectangle(cr.rect, mouse_pos_ndc)) {
             if (not cr.mouse_inside) {
-                cr.modified_signal.set_on();
                 std::vector<glm::vec3> cs(cr.ivpsc.xyz_positions.size(), cr.hover_color);
                 cr.ivpsc.rgb_colors = cs;
+                cr.ivpsc.buffer_modification_tracker.just_modified();
                 cr.mouse_inside = true;
                 cr.on_hover();
             }
         } else {
             if (cr.mouse_inside) {
-                cr.modified_signal.set_off();
                 std::vector<glm::vec3> cs(cr.ivpsc.xyz_positions.size(), cr.regular_color);
                 cr.ivpsc.rgb_colors = cs;
+                cr.ivpsc.buffer_modification_tracker.just_modified();
                 cr.mouse_inside = false;
             }
         }
@@ -38,16 +38,17 @@ void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
         if (is_point_in_rectangle(dd.dropdown_rect, mouse_pos_ndc)) {
             if (not dd.mouse_inside) {
                 dd.on_hover();
-                dd.modified_signal.set_on();
                 std::vector<glm::vec3> cs(dd.dropdown_background.xyz_positions.size(), dd.hover_color);
                 dd.dropdown_background.rgb_colors = cs;
+                dd.dropdown_background.buffer_modification_tracker.just_modified();
                 dd.mouse_inside = true;
             }
         } else {
             if (dd.mouse_inside) {
-                dd.modified_signal.set_off();
+                // dd.modified_signal.set_off();
                 std::vector<glm::vec3> cs(dd.dropdown_background.xyz_positions.size(), dd.regular_color);
                 dd.dropdown_background.rgb_colors = cs;
+                dd.dropdown_background.buffer_modification_tracker.just_modified();
                 dd.mouse_inside = false;
             }
         }
@@ -65,16 +66,16 @@ void UI::process_mouse_position(const glm::vec2 &mouse_pos_ndc) {
                 if (is_point_in_rectangle(dropdown_option_rect, mouse_pos_ndc)) {
                     if (not udo.mouse_inside) {
                         udo.on_hover(udo.option);
-                        udo.modified_signal.set_on();
                         std::vector<glm::vec3> cs(udo.background_ivpsc.xyz_positions.size(), udo.hover_color);
                         udo.background_ivpsc.rgb_colors = cs;
+                        udo.background_ivpsc.buffer_modification_tracker.just_modified();
                         udo.mouse_inside = true;
                     }
                 } else {
                     if (udo.mouse_inside) {
-                        udo.modified_signal.set_off();
                         std::vector<glm::vec3> cs(udo.background_ivpsc.xyz_positions.size(), udo.color);
                         udo.background_ivpsc.rgb_colors = cs;
+                        udo.background_ivpsc.buffer_modification_tracker.just_modified();
                         udo.mouse_inside = false;
                     }
                 }
@@ -107,10 +108,12 @@ void UI::unfocus_input_box(UIInputBox &ib) {
         draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
                                        ib.text_drawing_ivpsc.id); // maintining the same id
 
-        ib.text_drawing_ivpsc = text_ivpsc;
+        ib.text_drawing_ivpsc.copy_draw_data_from(text_ivpsc);
+        ib.text_drawing_ivpsc.buffer_modification_tracker.just_modified();
     }
-    ib.modified_signal.toggle_state();
+    // ib.modified_signal.toggle_state();
     ib.background_ivpsc.rgb_colors = cs;
+    ib.background_ivpsc.buffer_modification_tracker.just_modified();
 }
 
 void UI::unfocus_input_box(int input_box_eid) { unfocus_input_box(*get_inputbox(input_box_eid)); }
@@ -124,9 +127,9 @@ void UI::focus_input_box(UIInputBox &ib) {
     draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
                                    ib.text_drawing_ivpsc.id); // maintining the same id
 
-    ib.text_drawing_ivpsc = text_ivpsc;
+    ib.text_drawing_ivpsc.copy_draw_data_from(text_ivpsc);
     ib.focused = true;
-    ib.modified_signal.toggle_state();
+    ib.text_drawing_ivpsc.buffer_modification_tracker.just_modified();
 }
 
 void UI::focus_input_box(int input_box_eid) { focus_input_box(*get_inputbox(input_box_eid)); }
@@ -162,8 +165,10 @@ void UI::update_dropdown_option(UIDropdown &dropdown, const std::string &option_
     draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
                                    dropdown.dropdown_text_ivpsc.id); // maintining the same id
 
-    dropdown.dropdown_text_ivpsc = text_ivpsc;
-    dropdown.modified_signal.toggle_state();
+    dropdown.dropdown_text_ivpsc.copy_draw_data_from(text_ivpsc);
+    dropdown.dropdown_text_ivpsc.buffer_modification_tracker.just_modified();
+    dropdown.dropdown_background.buffer_modification_tracker.just_modified();
+    // dropdown.modified_signal.toggle_state();
 }
 
 bool UI::process_mouse_just_clicked_on_dropdown_options(const glm::vec2 &mouse_pos_ndc) {
@@ -221,8 +226,9 @@ bool UI::process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc)
                                                dd.dropdown_text_ivpsc.id); // maintining the same id
 
                 dd.dropdown_text_ivpsc = text_ivpsc;
+                dd.dropdown_text_ivpsc.buffer_modification_tracker.just_modified();
                 dd.dropdown_open = true;
-                dd.modified_signal.toggle_state();
+                // dd.modified_signal.toggle_state();
                 click_processed = true;
 
                 break;
@@ -240,7 +246,7 @@ bool UI::process_mouse_just_clicked_on_dropdowns(const glm::vec2 &mouse_pos_ndc)
                 /*    IVPTextured ivpt(tm.indices, tm.vertex_positions, tm.texture_coordinates);*/
                 /*    dd.text_drawing_data = ivpt;*/
                 /*}*/
-                dd.modified_signal.toggle_state();
+                // dd.modified_signal.toggle_state();
                 /*dd.background_ivpsc.rgb_colors = cs;*/
             }
         }
@@ -277,8 +283,9 @@ void UI::process_key_press(const std::string &character_pressed) {
             draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
                                            input_box.text_drawing_ivpsc.id); // maintining the same id
 
-            input_box.text_drawing_ivpsc = text_ivpsc;
-            input_box.modified_signal.toggle_state();
+            input_box.text_drawing_ivpsc.copy_draw_data_from(text_ivpsc);
+            input_box.text_drawing_ivpsc.buffer_modification_tracker.just_modified();
+            // input_box.modified_signal.toggle_state();
             break; // only one thing ever focused.
         }
     }
@@ -295,7 +302,8 @@ void UI::process_confirm_action() {
             std::vector<glm::vec3> cs(input_box.background_ivpsc.xyz_positions.size(), input_box.regular_color);
             draw_info::IVPColor ivpsc(input_box.background_ivpsc.indices, input_box.background_ivpsc.xyz_positions, cs);
             input_box.background_ivpsc = ivpsc;
-            input_box.modified_signal.toggle_state();
+            input_box.background_ivpsc.buffer_modification_tracker.just_modified();
+            // input_box.modified_signal.toggle_state();
 
             break;
         }
@@ -318,8 +326,9 @@ void UI::process_delete_action() {
             draw_info::IVPColor text_ivpsc(text_ivp, text_cs,
                                            input_box.text_drawing_ivpsc.id); // maintining the same id
 
-            input_box.text_drawing_ivpsc = text_ivpsc;
-            input_box.modified_signal.toggle_state();
+            input_box.text_drawing_ivpsc.copy_draw_data_from(text_ivpsc);
+            input_box.text_drawing_ivpsc.buffer_modification_tracker.just_modified();
+            // input_box.modified_signal.toggle_state();
             break; // only one thing ever focused.
         }
     }
@@ -375,8 +384,8 @@ int UI::add_textbox(const std::string &text, float center_x_pos_ndc, float cente
     int rect_id = abs_pos_object_id_generator.get_id();
     int text_data_id = abs_pos_object_id_generator.get_id();
 
-    global_logger->info("adding textbox with contents: {} element id: {} rect_id: {} text_data_id: {}", text, element_id,
-                       rect_id, text_data_id);
+    global_logger->info("adding textbox with contents: {} element id: {} rect_id: {} text_data_id: {}", text,
+                        element_id, rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs = vertex_geometry::generate_rectangle_vertices_with_z(center_x_pos_ndc, center_y_pos_ndc, background_layer,
@@ -457,7 +466,8 @@ void UI::modify_text_of_a_textbox(int doid, std::string new_text) {
         std::vector<glm::vec3> text_cs(text_ivp.xyz_positions.size(), glm::vec3(1, 1, 1));
 
         textbox->text_drawing_ivpsc = draw_info::IVPColor(text_ivp, text_cs, textbox->text_drawing_ivpsc.id);
-        textbox->modified_signal.toggle_state();
+        textbox->text_drawing_ivpsc.buffer_modification_tracker.just_modified();
+        // textbox->modified_signal.toggle_state();
     }
 }
 
@@ -470,7 +480,8 @@ void UI::modify_colored_rectangle(int doid, vertex_geometry::Rectangle ndc_recta
 
         // indices don't have to change
         colored_rectangle->ivpsc.xyz_positions = ndc_rectangle.get_ivs().xyz_positions;
-        colored_rectangle->modified_signal.toggle_state();
+        colored_rectangle->ivpsc.buffer_modification_tracker.just_modified();
+        // colored_rectangle->modified_signal.toggle_state();
     }
 }
 
@@ -518,7 +529,7 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
     std::string text = options[dropdown_option_idx];
 
     global_logger->info("adding main dropdown with contents: {} element id: {} rect id: {} text_data_id: {}", text,
-                       element_id, rect_id, text_data_id);
+                        element_id, rect_id, text_data_id);
 
     vertex_geometry::Rectangle layered_rect = rect;
     layered_rect.center.z = background_layer;
@@ -558,7 +569,7 @@ int UI::add_dropdown(std::function<void()> on_click, std::function<void()> on_ho
         int text_data_id = abs_pos_object_id_generator.get_id();
 
         global_logger->info("adding dropdown option with contents: {} rect_id: {} text_data_id: {}", option, rect_id,
-                           text_data_id);
+                            text_data_id);
 
         auto ivs = option_rect.get_ivs();
         auto is = ivs.indices;
@@ -672,7 +683,7 @@ int UI::add_clickable_textbox(std::function<void()> on_click, std::function<void
     int text_data_id = abs_pos_object_id_generator.get_id();
 
     global_logger->info("adding clickable textbox with text: {} element id: {} rect id: {} text data id: {}", text,
-                       element_id, rect_id, text_data_id);
+                        element_id, rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs =
@@ -710,7 +721,7 @@ int UI::add_input_box(std::function<void(std::string)> on_confirm, const std::st
     int text_data_id = abs_pos_object_id_generator.get_id();
 
     global_logger->info("adding input box with placeholder text: {} element id: {}, rect id: {} text data id: {}",
-                       placeholder_text, element_id, rect_id, text_data_id);
+                        placeholder_text, element_id, rect_id, text_data_id);
 
     auto is = vertex_geometry::generate_rectangle_indices();
     auto vs =
@@ -730,11 +741,11 @@ int UI::add_input_box(std::function<void(std::string)> on_confirm, const std::st
     return element_id;
 };
 
-const std::vector<UIClickableTextBox> &UI::get_clickable_text_boxes() const { return clickable_text_boxes; }
-const std::vector<UIDropdown> &UI::get_dropdowns() const { return dropdowns; }
-const std::vector<UIInputBox> &UI::get_input_boxes() const { return input_boxes; }
-const std::vector<UITextBox> &UI::get_text_boxes() const { return text_boxes; }
-const std::vector<UIRect> &UI::get_colored_boxes() const { return rectangles; }
+std::vector<UIClickableTextBox> &UI::get_clickable_text_boxes() { return clickable_text_boxes; }
+std::vector<UIDropdown> &UI::get_dropdowns() { return dropdowns; }
+std::vector<UIInputBox> &UI::get_input_boxes() { return input_boxes; }
+std::vector<UITextBox> &UI::get_text_boxes() { return text_boxes; }
+std::vector<UIRect> &UI::get_colored_boxes() { return rectangles; }
 
 void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRenderSuite &ui_render_suite,
                                  const std::vector<std::string> &key_strings_just_pressed,
@@ -779,7 +790,7 @@ void process_and_queue_render_ui(glm::vec2 ndc_mouse_pos, UI &curr_ui, IUIRender
         ui_render_suite.render_dropdown(dd);
         if (dd.dropdown_open) {
             int num_dropdowns = dd.ui_dropdown_options.size();
-            for (const auto &udo : dd.ui_dropdown_options) {
+            for (auto &udo : dd.ui_dropdown_options) {
                 ui_render_suite.render_dropdown_option(udo);
             }
         }

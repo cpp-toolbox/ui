@@ -36,7 +36,7 @@ struct UIRect {
     int parent_ui_id;
     draw_info::IVPColor ivpsc;
     bool mouse_above = false;
-    TemporalBinarySignal modified_signal;
+    // TemporalBinarySignal modified_signal;
 
     bool hidden = false;
 
@@ -50,7 +50,7 @@ struct UITextBox {
     draw_info::IVPColor text_drawing_ivpsc;
     vertex_geometry::Rectangle bounding_rect;
     bool mouse_above = false;
-    TemporalBinarySignal modified_signal;
+    // TemporalBinarySignal modified_signal;
 
     bool hidden = false;
 
@@ -70,7 +70,7 @@ struct UIClickableTextBox {
     glm::vec3 hover_color;
     vertex_geometry::Rectangle rect;
     bool mouse_inside = false;
-    TemporalBinarySignal modified_signal;
+    // TemporalBinarySignal modified_signal;
 
     UIClickableTextBox(std::function<void()> on_click, std::function<void()> on_hover, draw_info::IVPColor ivpsc,
                        draw_info::IVPColor text_drawing_data, glm::vec3 regular_color, glm::vec3 hover_color,
@@ -96,7 +96,7 @@ struct UIDropdownOption {
     draw_info::IVPColor background_ivpsc;
     draw_info::IVPColor text_ivpsc;
 
-    TemporalBinarySignal modified_signal;
+    // TemporalBinarySignal modified_signal;
 
     vertex_geometry::Rectangle rect;
 
@@ -125,7 +125,7 @@ struct UIDropdown {
     std::vector<UIDropdownOption> ui_dropdown_options;
     bool mouse_inside = false;
     bool dropdown_open = false;
-    TemporalBinarySignal modified_signal;
+    // TemporalBinarySignal modified_signal;
 
     UIDropdown(std::function<void()> on_click, std::function<void()> on_hover, draw_info::IVPColor dropdown_background,
                draw_info::IVPColor dropdown_text_data, glm::vec3 regular_color, glm::vec3 hover_color,
@@ -150,7 +150,7 @@ struct UIInputBox {
     glm::vec3 focused_color;
     vertex_geometry::Rectangle rect;
     bool focused = false;
-    TemporalBinarySignal modified_signal;
+    // TemporalBinarySignal modified_signal;
     /// @note sometimes you have a key which initializes the input box, and you want to ignore that stroke so that you
     /// don't get an initial character in the box.
     std::optional<std::string> initial_ignore_character;
@@ -324,11 +324,11 @@ class UI {
     /*const std::vector<UIClickableTextBox> &get_clickable_text_boxes() const;*/
     /*const std::vector<IVPTextured> &get_text_boxes() const;*/
 
-    const std::vector<UIClickableTextBox> &get_clickable_text_boxes() const;
-    const std::vector<UIDropdown> &get_dropdowns() const;
-    const std::vector<UIInputBox> &get_input_boxes() const;
-    const std::vector<UITextBox> &get_text_boxes() const;
-    const std::vector<UIRect> &get_colored_boxes() const;
+    std::vector<UIClickableTextBox> &get_clickable_text_boxes();
+    std::vector<UIDropdown> &get_dropdowns();
+    std::vector<UIInputBox> &get_input_boxes();
+    std::vector<UITextBox> &get_text_boxes();
+    std::vector<UIRect> &get_colored_boxes();
 
   private:
     void disable_focus_on_all_input_boxes();
@@ -355,33 +355,33 @@ class IUIRenderSuite {
      * @brief Render a colored box.
      * @param cb The UIRect containing rendering data.
      */
-    virtual void render_colored_box(const UIRect &cb) = 0;
+    virtual void render_colored_box(UIRect &cb) = 0;
 
     /**
      * @brief Render a text box.
      * @param tb The UITextBox containing text and background data.
      */
-    virtual void render_text_box(const UITextBox &tb) = 0;
+    virtual void render_text_box(UITextBox &tb) = 0;
 
     /**
      * @brief Render a clickable text box.
      * @param cr The UIClickableTextBox containing text and background data.
      */
-    virtual void render_clickable_text_box(const UIClickableTextBox &cr) = 0;
+    virtual void render_clickable_text_box(UIClickableTextBox &cr) = 0;
 
     /**
      * @brief Render an input box.
      * @param ib The UIInputBox containing text and background data.
      */
-    virtual void render_input_box(const UIInputBox &ib) = 0;
+    virtual void render_input_box(UIInputBox &ib) = 0;
 
     /**
      * @brief Render a dropdown menu.
      * @param dd The UIDropdown containing text and background data.
      */
-    virtual void render_dropdown(const UIDropdown &dd) = 0;
+    virtual void render_dropdown(UIDropdown &dd) = 0;
 
-    virtual void render_dropdown_option(const UIDropdownOption &udo) = 0;
+    virtual void render_dropdown_option(UIDropdownOption &udo) = 0;
 };
 
 /**
